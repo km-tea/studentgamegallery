@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>구구단 게임</title>
+<style>body{font-family:system-ui,sans-serif;max-width:420px;margin:40px auto;padding:0 16px;text-align:center}input{font-size:1.4rem;width:6em;text-align:center}button{font-size:1.1rem;padding:8px 18px;margin-top:12px}a{display:inline-block;margin-top:16px}</style></head>
+<body>
+<h1>구구단 게임</h1><div id="box"></div>
+<!-- 갤러리 연결: 이 두 가지만 하면 돼요 (1) 아래 script 한 줄 (2) 게임이 끝날 때 reportScore 호출 -->
+<script src="/gallery-sdk.js"></script>
+<script>
+var N=5,i=0,ok=0,a,b;
+function ask(){a=2+Math.floor(Math.random()*8);b=2+Math.floor(Math.random()*8);
+ box.innerHTML='<p>'+(i+1)+' / '+N+'</p><h2>'+a+' × '+b+' = ?</h2><input id="ans" type="number" inputmode="numeric"><br><button id="go">확인</button>';
+ ans.focus();ans.onkeydown=function(e){if(e.key==='Enter')go.click()};
+ go.onclick=function(){if(+ans.value===a*b)ok++;if(++i<N)ask();else end()};}
+function end(){var score=ok*20;GallerySDK.reportScore('2026-math-gugudan',score);
+ box.innerHTML='<h2>'+score+'점!</h2><p>'+N+'문제 중 '+ok+'개 맞혔어요.</p><button onclick="location.reload()">다시 하기</button><br><a href="/">갤러리로 돌아가기</a>';}
+ask();
+</script></body></html>

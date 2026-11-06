@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 반 웹앱 갤러리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4F7FB;--card:#fff;--ink:#14213D;--sub:#5B6784;--line:#D9E0EC;--blue:#2459D6;--onblue:#fff;--sun:#FFC83D;--track:#E6ECF6}
+@media(prefers-color-scheme:dark){:root{--bg:#10172A;--card:#1A2440;--ink:#EEF2FB;--sub:#9AA6C4;--line:#2D3A5E;--blue:#6F97FF;--onblue:#10172A;--sun:#FFD66B;--track:#2D3A5E}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Gowun Dodum','Noto Sans KR',system-ui,sans-serif;line-height:1.6}
+header,main{max-width:1000px;margin:0 auto;padding:0 20px}
+header{padding-top:36px;padding-bottom:8px}
+h1{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:clamp(2rem,6vw,3rem);margin:0 0 4px;line-height:1.2}
+header p{margin:0;color:var(--sub)}
+.filters{display:flex;flex-wrap:wrap;gap:8px 20px;margin:20px 0 24px}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group b{font-weight:400;color:var(--sub);margin-right:4px}
+.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 14px;font:inherit;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.chip:focus-visible,.btn:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding-bottom:48px}
+.card{position:relative;background:var(--card);border:1.5px solid var(--line);border-radius:var(--r,14px);padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px}
+.card h2{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.35rem;margin:0;padding-right:64px;line-height:1.3}
+.tag{color:var(--sub);font-size:.9rem}
+.desc{margin:0;flex:1}
+.stamp{position:absolute;top:14px;right:14px;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:'Jua',sans-serif;font-size:.95rem;border:2px dashed var(--line);color:var(--sub);transform:rotate(-10deg)}
+.stamp.done{border:3px double var(--blue);color:var(--blue);background:color-mix(in srgb,var(--sun) 35%,transparent)}
+.bar{height:8px;border-radius:99px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue)}
+.prog{font-size:.88rem;color:var(--sub)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.btn{display:inline-block;border-radius:10px;padding:7px 16px;text-decoration:none;font:inherit;border:1.5px solid var(--blue);color:var(--blue)}
+.btn.play{background:var(--blue);color:var(--onblue)}
+.btn.cert{background:var(--sun);border-color:var(--sun);color:#14213D;font-weight:700}
+.empty{color:var(--sub);padding:32px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>우리 반 웹앱 갤러리</h1>
+  <p>친구들이 만든 앱을 해 보고, 기준 점수를 넘기면 수료증을 받아요.</p>
+</header>
+<main>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<script src="gallery-sdk.js"></script>
+<script>
+var apps=[],sel={year:'',subject:''};
+var grid=document.getElementById('grid'),filters=document.getElementById('filters');
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function uniq(k){var v=[];apps.forEach(function(a){if(v.indexOf(a[k])<0)v.push(a[k])});return v.sort(function(x,y){return k==='year'?y-x:String(x).localeCompare(String(y),'ko')})}
+function chips(){
+  filters.innerHTML='';
+  [['year','연도'],['subject','주제']].forEach(function(g){
+    var box=document.createElement('div');box.className='group';box.innerHTML='<b>'+g[1]+'</b>';
+    ['전체'].concat(uniq(g[0])).forEach(function(v){
+      var b=document.createElement('button');b.className='chip';b.textContent=v==='전체'?'전체':(g[0]==='year'?v+'년':v);
+      b.setAttribute('aria-pressed',String((v==='전체'&&!sel[g[0]])||String(sel[g[0]])===String(v)));
+      b.onclick=function(){sel[g[0]]=v==='전체'?'':v;chips();render()};
+      box.appendChild(b);
+    });
+    filters.appendChild(box);
+  });
+}
+function render(){
+  var list=apps.filter(function(a){return(!sel.year||String(a.year)===String(sel.year))&&(!sel.subject||a.subject===sel.subject)});
+  if(!list.length){grid.innerHTML='<p class="empty">이 조건에 맞는 앱이 아직 없어요.</p>';return}
+  grid.innerHTML=list.map(function(a){
+    var s=a.scoring,p=GallerySDK.getProgress(a.id),best=p?p.best:0,plays=p?p.plays:0,ok=GallerySDK.isPassed(a);
+    var pct=s?Math.min(100,Math.round(best/s.pass*100)):0;
+    var stamp=s?'<div class="stamp'+(ok?' done':'')+'">'+(ok?'수료':'도전')+'</div>':'';
+    var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+'점 · '+plays+'회 플레이<br>수료 조건: '+s.pass+'점 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
+    var cert=s?(ok?'<a class="btn cert" href="certificate.html?id='+encodeURIComponent(a.id)+'">수료증 받기</a>':''):'';
+    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path)+'">플레이</a>'+cert+'</div></article>';
+  }).join('');
+}
+fetch('apps.json').then(function(r){return r.json()}).then(function(d){apps=d;chips();render()})
+.catch(function(){grid.innerHTML='<p class="empty">apps.json을 불러오지 못했어요. 파일 위치와 형식을 확인해 주세요. (파일을 그냥 열면 안 되고, Netlify나 로컬 서버에서 열어야 해요.)</p>'});
+</script>
+</body>
+</html>

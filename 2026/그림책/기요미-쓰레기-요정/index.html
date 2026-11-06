@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>기요미 쓰레기 요정 - SDGs 13 기후변화 대응</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Gaegu, Gamja Flower) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gamja+Flower&display=swap" rel="stylesheet">
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        creamBg: '#FDFBF7',
+                        beigeLight: '#F7F0E6',
+                        beigeMid: '#EADBC8',
+                        beigeDark: '#D8C4B0',
+                        warmBrown: '#7A5C43',
+                        deepBrown: '#543D2B',
+                        toneUpBrown: '#A68A70',
+                        softCream: '#FFFDF9',
+                        mutedGreen: '#7A8F78',
+                        softSage: '#9EB09B',
+                        accentPeach: '#DB9882',
+                        cuteYellow: '#F3D26D'
+                    },
+                    fontFamily: {
+                        gaegu: ['Gaegu', 'cursive'],
+                        gamja: ['Gamja Flower', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Gaegu', cursive;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #FDFBF7;
+            color: #7A5C43;
+            overflow: hidden;
+            font-size: 1.15rem;
+        }
+
+        .font-gamja {
+            font-family: 'Gamja Flower', cursive;
+        }
+
+        /* Animations */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(1deg); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        @keyframes cuteWalk {
+            0%, 100% { transform: translateY(0px) rotate(-2deg) scale(1); }
+            50% { transform: translateY(-7px) rotate(2deg) scale(1.02); }
+        }
+        .animate-cute-walk {
+            animation: cuteWalk 0.6s ease-in-out infinite;
+        }
+
+        @keyframes softGlow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(92, 64, 51, 0.15); }
+            50% { transform: scale(1.02); box-shadow: 0 0 18px rgba(92, 64, 51, 0.25); }
+        }
+        .animate-soft-glow {
+            animation: softGlow 2.5s infinite;
+        }
+
+        /* Trash Item Dragging Visuals */
+        .trash-item {
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .trash-item:active {
+            cursor: grabbing;
+            transform: scale(1.25) !important;
+            z-index: 100 !important;
+        }
+
+        /* Cute Fairy Bounce & Glow Animation */
+        @keyframes fairyWing {
+            0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(-8px) rotate(3deg) scale(1.05); }
+        }
+        .animate-fairy {
+            animation: fairyWing 2s ease-in-out infinite;
+        }
+
+        /* Speech Bubble Arrow */
+        .bubble-arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #FAFAF7 transparent;
+            display: block;
+            width: 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E6DCCF;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center relative select-none bg-creamBg text-warmBrown">
+
+    <!-- Top Header -->
+    <header class="w-full bg-beigeLight/90 border-b-2 border-beigeDark px-4 py-2 shadow-sm flex items-center justify-between z-20">
+        <div class="flex items-center space-x-2">
+            <div class="bg-warmBrown text-softCream text-sm font-bold px-3 py-1 rounded-full flex items-center border border-beigeDark font-gamja">
+                <i class="fa-solid fa-leaf mr-1.5 text-cuteYellow"></i>
+                <span>SDG 13. 기후변화 대응</span>
+            </div>
+            <div id="speed-indicator" class="hidden md:flex bg-beigeMid/70 text-warmBrown text-xs font-bold px-2.5 py-1 rounded-full font-gamja items-center border border-beigeDark">
+                <i class="fa-solid fa-gauge-high mr-1"></i> 속도 레벨 <span id="speed-lvl">1</span>
+            </div>
+        </div>
+
+        <h1 class="text-2xl md:text-3xl font-bold text-warmBrown flex items-center tracking-wide font-gaegu">
+            🧚‍♂️ 기요미 쓰레기 요정 🧚‍♀️
+        </h1>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="openModal('info-modal')" class="bg-beigeMid/80 hover:bg-beigeDark text-warmBrown p-2 rounded-full transition text-base border border-beigeDark" title="게임 안내">
+                <i class="fa-solid fa-circle-info text-xl"></i>
+            </button>
+            <button onclick="toggleSound()" class="bg-beigeMid/80 hover:bg-beigeDark text-warmBrown p-2 rounded-full transition text-base border border-beigeDark" title="소리 켜기/끄기">
+                <i id="sound-icon" class="fa-solid fa-volume-high text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main id="game-container" class="relative w-full max-w-5xl flex-1 flex flex-col justify-between p-2 md:p-4 overflow-hidden">
+
+        <!-- Scoreboard & Thermometer -->
+        <div class="w-full bg-softCream/95 backdrop-blur-md rounded-2xl p-3 shadow-sm border-2 border-beigeDark flex flex-wrap md:flex-nowrap justify-between items-center gap-2 z-20">
+            <!-- Score & Carbon -->
+            <div class="flex items-center space-x-4">
+                <div>
+                    <span class="text-warmBrown/80 text-sm font-bold block">현재 점수</span>
+                    <div class="text-3xl font-bold text-warmBrown font-gamja"><span id="score-text">0</span> <span class="text-base">P</span></div>
+                </div>
+                <div class="border-l-2 pl-4 border-beigeDark">
+                    <span class="text-warmBrown/80 text-sm font-bold block">탄소 절감</span>
+                    <div class="text-2xl font-bold text-warmBrown font-gamja"><span id="carbon-text">0.0</span> <span class="text-sm">kg</span></div>
+                </div>
+            </div>
+
+            <!-- Earth Thermometer -->
+            <div class="flex-1 max-w-xs mx-2 flex flex-col items-center">
+                <div class="flex justify-between w-full text-sm font-bold mb-1">
+                    <span id="earth-emoji-text" class="text-warmBrown flex items-center">
+                        <span id="earth-emoji" class="text-2xl mr-1 animate-bounce">🌍</span> <span id="earth-status-label" class="text-base">지구가 방긋 웃어요!</span>
+                    </span>
+                    <span id="temp-text" class="text-warmBrown font-gamja text-lg font-bold">1.0 °C</span>
+                </div>
+                <div class="w-full bg-beigeMid/60 rounded-full h-4 overflow-hidden border border-beigeDark relative shadow-inner">
+                    <div id="temp-bar" class="bg-gradient-to-r from-toneUpBrown via-warmBrown to-deepBrown h-full w-[10%] transition-all duration-500 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- Combo, Shared Items & Timer -->
+            <div class="flex items-center space-x-3">
+                <div id="combo-badge" class="hidden bg-warmBrown text-softCream px-3 py-1 rounded-full text-sm font-bold animate-bounce font-gamja border border-beigeDark">
+                    <span id="combo-count">2</span> COMBO!
+                </div>
+                <div class="bg-softCream text-warmBrown px-3 py-1 rounded-2xl border-2 border-beigeDark flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-gift text-warmBrown text-lg"></i>
+                    <span id="shared-count-text" class="text-2xl font-bold font-gamja">0</span>
+                    <span class="text-sm font-bold">개 나눔</span>
+                </div>
+                <!-- 3 Minute Game Timer -->
+                <div class="bg-warmBrown text-softCream px-3.5 py-1 rounded-2xl border-2 border-beigeDark flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-clock text-lg animate-spin text-cuteYellow"></i>
+                    <span id="timer-text" class="text-2xl font-bold font-gamja">03:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upper Stage: Trash Bin Interior -->
+        <div class="relative h-[47%] my-2 rounded-3xl border-4 border-beigeDark bg-gradient-to-b from-beigeLight via-softCream to-beigeLight/60 flex flex-col items-center justify-between p-3 overflow-hidden shadow-sm cursor-pointer group" id="spawn-area" onclick="handleTrashBinClick(event)">
+
+            <!-- Background Cute Trash Bin Frame Decor -->
+            <div class="absolute inset-0 opacity-20 pointer-events-none flex items-center justify-around text-6xl text-warmBrown">
+                <span>🧺</span><span>⭐</span><span>🌷</span><span>🧸</span><span>✨</span>
+            </div>
+
+            <!-- Click/Tap Prompt Floating Button -->
+            <div class="absolute top-3 right-3 bg-beigeMid/90 hover:bg-beigeDark text-warmBrown text-sm font-bold px-3 py-1.5 rounded-full shadow border-2 border-beigeDark flex items-center space-x-1.5 animate-bounce z-20 pointer-events-none font-gamja">
+                <i class="fa-solid fa-hand-pointer text-warmBrown"></i>
+                <span>👉 톡톡 터치해서 보물 찾기!</span>
+            </div>
+
+            <!-- Ultra Cute Fairy Helper Bubble -->
+            <div id="fairy-container" class="hidden absolute top-2 left-3 flex items-center space-x-2 bg-softCream/95 backdrop-blur rounded-2xl px-3.5 py-1.5 shadow border-2 border-beigeDark z-20 pointer-events-none max-w-sm">
+                <div class="w-12 h-12 flex-shrink-0 animate-fairy">
+                    <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full filter drop-shadow-sm">
+                        <!-- Rainbow Wings -->
+                        <path d="M10 22C2 10 0 28 16 28Z" fill="#D8C4B0" opacity="0.85"/>
+                        <path d="M50 22C58 10 60 28 44 28Z" fill="#EADBC8" opacity="0.85"/>
+                        <!-- Picture-Book Gem Ring -->
+                        <circle cx="30" cy="5" r="5" stroke="#F3D26D" stroke-width="2.5" fill="none"/>
+                        <polygon points="30,0 34,5 30,10 26,5" fill="#DB9882"/>
+                        <polygon points="30,1 33,5 30,9 27,5" fill="#F3D26D"/>
+                        <!-- Hair -->
+                        <circle cx="30" cy="27" r="17" fill="#F3D26D"/>
+                        <!-- Head -->
+                        <circle cx="30" cy="27" r="13" fill="#F7F0E6"/>
+                        <!-- Eyes -->
+                        <circle cx="24" cy="27" r="2.5" fill="#543D2B"/>
+                        <circle cx="36" cy="27" r="2.5" fill="#543D2B"/>
+                        <circle cx="25" cy="26" r="0.9" fill="#FFF"/>
+                        <circle cx="37" cy="26" r="0.9" fill="#FFF"/>
+                        <!-- Cheeks & Smile -->
+                        <ellipse cx="21" cy="30" rx="3.5" ry="2" fill="#DB9882"/>
+                        <ellipse cx="39" cy="30" rx="3.5" ry="2" fill="#DB9882"/>
+                        <path d="M26 31Q30 35 34 31" stroke="#543D2B" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Body -->
+                        <path d="M20 37L40 37L44 54L16 54Z" fill="#D8C4B0" rx="3"/>
+                        <path d="M18 43L42 43L43 48L17 48Z" fill="#DB9882"/>
+                        <path d="M17 48L43 48L44 54L16 54Z" fill="#EADBC8"/>
+                    </svg>
+                </div>
+                <div class="text-base text-warmBrown font-bold leading-snug" id="fairy-bubble">
+                    나랑 쓰레기 주인 찾자ㅏ 키키키!
+                </div>
+            </div>
+
+            <!-- Trash Can Label -->
+            <div class="absolute bottom-2 right-4 font-gaegu text-2xl font-bold text-warmBrown select-none pointer-events-none flex items-center space-x-1 bg-softCream/90 px-3 py-0.5 rounded-full border border-beigeDark shadow-sm">
+                <span>🧺 기요미 보물 쓰레기통</span>
+            </div>
+
+            <!-- Trash Items Container -->
+            <div id="trash-container" class="w-full h-full relative flex items-center justify-center pt-8">
+                <!-- Spawns items -->
+            </div>
+        </div>
+
+        <!-- Lower Stage: Walking SVG People & Recycling Bin -->
+        <div class="relative h-[43%] grid grid-cols-5 gap-2 w-full z-10">
+
+            <!-- Left 3 Columns: Cute Village Street (+100P Sharing) -->
+            <div id="street-zone" class="col-span-3 dropzone relative bg-gradient-to-b from-beigeLight via-softCream to-beigeMid/40 border-3 border-beigeDark rounded-3xl p-2 flex flex-col justify-between overflow-hidden shadow-sm">
+                
+                <!-- Zone Title -->
+                <div class="flex justify-between items-center px-2 z-10 pointer-events-none">
+                    <span class="text-xs md:text-sm font-bold text-warmBrown bg-softCream/95 px-3 py-1 rounded-full border border-beigeDark shadow-sm flex items-center">
+                        🏡 따뜻한 마을 거리 (사람 친구에게 끌어서 나눔!)
+                    </span>
+                    <span class="text-xs md:text-sm font-gamja bg-warmBrown text-softCream font-bold px-2.5 py-1 rounded-full shadow-sm border border-beigeDark">
+                        나눔 성공 +100P
+                    </span>
+                </div>
+
+                <!-- Walking Track -->
+                <div id="people-track" class="relative w-full flex-1 flex items-center overflow-hidden">
+                    <!-- Custom SVG human characters walk here -->
+                </div>
+            </div>
+
+            <!-- Right 2 Columns: Categorized Recycling Bins (+80P) -->
+            <div class="col-span-2 grid grid-cols-2 gap-1.5 h-full">
+                <!-- 1. 의류함 (모자, 점퍼, 원피스, 청바지, 인형) -->
+                <div id="recycle-fabric" data-recycle-category="fabric" class="dropzone bg-gradient-to-b from-softCream to-beigeLight border-2 border-beigeDark rounded-2xl p-1 flex flex-col items-center justify-center text-center shadow-sm hover:scale-[1.02] transition">
+                    <div class="text-xl md:text-2xl mb-0.5">👕</div>
+                    <span class="text-xs font-bold text-warmBrown">의류함</span>
+                    <span class="text-[10px] text-warmBrown/80 leading-none">모자/옷/인형</span>
+                    <span class="text-[10px] font-gamja bg-warmBrown text-softCream font-bold px-1.5 py-0.2 rounded-full mt-1">+80P</span>
+                </div>
+
+                <!-- 2. 종이류함 (박스, 신문지, 우유팩, 책) -->
+                <div id="recycle-paper" data-recycle-category="paper" class="dropzone bg-gradient-to-b from-softCream to-beigeLight border-2 border-beigeDark rounded-2xl p-1 flex flex-col items-center justify-center text-center shadow-sm hover:scale-[1.02] transition">
+                    <div class="text-xl md:text-2xl mb-0.5">📦</div>
+                    <span class="text-xs font-bold text-warmBrown">종이류</span>
+                    <span class="text-[10px] text-warmBrown/80 leading-none">박스/책/우유팩</span>
+                    <span class="text-[10px] font-gamja bg-warmBrown text-softCream font-bold px-1.5 py-0.2 rounded-full mt-1">+80P</span>
+                </div>
+
+                <!-- 3. 플라스틱함 (페트병, 컵, 장난감) -->
+                <div id="recycle-plastic" data-recycle-category="plastic" class="dropzone bg-gradient-to-b from-softCream to-beigeLight border-2 border-beigeDark rounded-2xl p-1 flex flex-col items-center justify-center text-center shadow-sm hover:scale-[1.02] transition">
+                    <div class="text-xl md:text-2xl mb-0.5">🥤</div>
+                    <span class="text-xs font-bold text-warmBrown">플라스틱</span>
+                    <span class="text-[10px] text-warmBrown/80 leading-none">페트병/컵/장난감</span>
+                    <span class="text-[10px] font-gamja bg-warmBrown text-softCream font-bold px-1.5 py-0.2 rounded-full mt-1">+80P</span>
+                </div>
+
+                <!-- 4. 캔/유리/금속 (캔, 냄비, 유리병) -->
+                <div id="recycle-metal" data-recycle-category="metal_glass" class="dropzone bg-gradient-to-b from-softCream to-beigeLight border-2 border-beigeDark rounded-2xl p-1 flex flex-col items-center justify-center text-center shadow-sm hover:scale-[1.02] transition">
+                    <div class="text-xl md:text-2xl mb-0.5">🥫</div>
+                    <span class="text-xs font-bold text-warmBrown">캔/유리</span>
+                    <span class="text-[10px] text-warmBrown/80 leading-none">캔/냄비/유리병</span>
+                    <span class="text-[10px] font-gamja bg-warmBrown text-softCream font-bold px-1.5 py-0.2 rounded-full mt-1">+80P</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Mid-Game Quiz Modal -->
+    <div id="quiz-modal" class="hidden fixed inset-0 bg-deepBrown/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-creamBg rounded-3xl p-6 max-w-md w-full shadow-2xl text-center border-4 border-beigeDark relative text-warmBrown animate-bounce-once">
+            <div class="w-16 h-16 bg-beigeLight rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-beigeDark">
+                📖
+            </div>
+            <span class="bg-warmBrown text-creamBg text-xs font-bold px-3 py-1 rounded-full font-gamja">《쓰레기통 요정》 그림책 퀴즈!</span>
+            
+            <h3 id="quiz-question-text" class="text-2xl font-bold mt-3 mb-4 font-gaegu leading-snug">
+                <!-- Question loaded dynamically -->
+            </h3>
+
+            <!-- Answer Options -->
+            <div id="quiz-options" class="grid grid-cols-2 gap-3 mb-4 font-gaegu">
+                <!-- Option buttons loaded dynamically -->
+            </div>
+
+            <!-- Quiz Result Message -->
+            <div id="quiz-result-msg" class="hidden text-xl font-bold p-3 rounded-xl mb-4 font-gaegu"></div>
+
+            <button id="quiz-continue-btn" onclick="closeQuizModal()" class="hidden w-full bg-warmBrown hover:bg-deepBrown text-creamBg font-bold text-xl py-2.5 rounded-xl font-gaegu shadow">
+                계속 나눔하기!
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Start Modal -->
+    <div id="start-modal" class="fixed inset-0 bg-deepBrown/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-creamBg rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border-4 border-beigeDark relative text-warmBrown">
+            <!-- Modal Picture-book Style Fairy SVG -->
+            <div class="w-24 h-24 bg-beigeLight rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner border-2 border-beigeDark animate-fairy p-2">
+                <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                    <path d="M10 22C2 10 0 28 16 28Z" fill="#D4C3B2" opacity="0.85"/>
+                    <path d="M50 22C58 10 60 28 44 28Z" fill="#E6DCCF" opacity="0.85"/>
+                    <circle cx="30" cy="5" r="5" stroke="#E8C55A" stroke-width="2.5" fill="none"/>
+                    <polygon points="30,0 34,5 30,10 26,5" fill="#C87D65"/>
+                    <polygon points="30,1 33,5 30,9 27,5" fill="#E8C55A"/>
+                    <circle cx="30" cy="27" r="17" fill="#E8C55A"/>
+                    <circle cx="30" cy="27" r="13" fill="#F5EFE6"/>
+                    <circle cx="24" cy="27" r="2.5" fill="#3E2A20"/>
+                    <circle cx="36" cy="27" r="2.5" fill="#3E2A20"/>
+                    <circle cx="25" cy="26" r="0.9" fill="#FFF"/>
+                    <circle cx="37" cy="26" r="0.9" fill="#FFF"/>
+                    <ellipse cx="21" cy="30" rx="3.5" ry="2" fill="#C87D65"/>
+                    <ellipse cx="39" cy="30" rx="3.5" ry="2" fill="#C87D65"/>
+                    <path d="M26 31Q30 35 34 31" stroke="#3E2A20" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M20 37L40 37L44 54L16 54Z" fill="#D4C3B2" rx="3"/>
+                    <path d="M18 43L42 43L43 48L17 48Z" fill="#C87D65"/>
+                    <path d="M17 48L43 48L44 54L16 54Z" fill="#E6DCCF"/>
+                </svg>
+            </div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-1 font-gaegu">기요미 쓰레기 요정</h2>
+            <p class="text-sm text-warmBrown font-bold mb-4 font-gamja">SDG 13. 기후변화 대응 어린이 환경 보호 게임</p>
+
+            <div class="bg-beigeLight rounded-2xl p-4 text-left text-sm text-warmBrown space-y-2 mb-6 border border-beigeDark">
+                <p class="flex items-center font-bold text-warmBrown text-base"><i class="fa-solid fa-heart text-warmBrown mr-2"></i> 게임하는 방법:</p>
+                <p>1. 지나가는 귀여운 사람 친구가 원하는 물건을 <b>친구에게 주면 <span class="text-warmBrown font-bold">나눔 완료 (+100P)</span></b>!</p>
+                <p>2. 기타 분리수거품은 <b>오른쪽 재활용함에 골인 <span class="text-warmBrown font-bold">재활용 완료 (+80P)</span></b>!</p>
+                <p class="text-xs text-warmBrown font-bold mt-1">⚡ 시간과 점수가 높아질수록 친구들의 걸음이 점점 빨라져요!</p>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-warmBrown hover:bg-deepBrown text-creamBg font-bold text-2xl py-3 rounded-2xl shadow-md transform transition active:scale-95 flex items-center justify-center space-x-2 font-gaegu border border-beigeDark">
+                <i class="fa-solid fa-play"></i>
+                <span>모험 시작하기!</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Info / SDG 13 Modal -->
+    <div id="info-modal" class="hidden fixed inset-0 bg-deepBrown/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-creamBg rounded-3xl p-6 max-w-md w-full shadow-2xl text-warmBrown border-4 border-beigeDark relative">
+            <button onclick="closeModal('info-modal')" class="absolute top-4 right-4 text-warmBrown/60 hover:text-warmBrown text-xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-2xl font-bold text-warmBrown mb-3 flex items-center font-gaegu">
+                <i class="fa-solid fa-leaf text-warmBrown mr-2"></i> 지속가능발전목표 (SDGs) 13번
+            </h3>
+            <div class="text-sm space-y-2 leading-relaxed mb-4">
+                <p class="bg-beigeLight p-3 rounded-xl border border-beigeDark font-medium">
+                    <b>기후변화 대응 (Climate Action)</b><br>
+                    쓰레기를 줄이고 재사용 및 재활용을 실천하면 탄소 배출량이 감축되어 온실가스로 지구가 뜨거워지는 기후위기를 막을 수 있습니다.
+                </p>
+            </div>
+            <button onclick="closeModal('info-modal')" class="w-full bg-warmBrown hover:bg-deepBrown text-creamBg font-bold text-lg py-2 rounded-xl font-gaegu border border-beigeDark">
+                확인했어요!
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Certificate Modal -->
+    <div id="gameover-modal" class="hidden fixed inset-0 bg-deepBrown/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-creamBg rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border-4 border-beigeDark my-auto relative text-warmBrown">
+            <div class="w-16 h-16 bg-beigeLight rounded-full flex items-center justify-center text-4xl mx-auto mb-2 border border-beigeDark">
+                🏆
+            </div>
+            <h2 class="text-3xl font-bold text-warmBrown font-gaegu">기후 수호자 인증서</h2>
+            <p class="text-sm text-warmBrown mb-4 font-gamja">지구를 위해 따뜻한 나눔을 해준 기요미 요정님!</p>
+
+            <!-- Certificate Summary -->
+            <div class="bg-beigeLight rounded-2xl p-4 border-2 border-beigeDark shadow-inner mb-5 text-left text-sm text-warmBrown space-y-2">
+                <div class="flex justify-between border-b border-beigeDark pb-2">
+                    <span class="font-bold opacity-80">최종 점수:</span>
+                    <span id="final-score" class="text-2xl font-bold text-warmBrown font-gamja">0 P</span>
+                </div>
+                <div class="flex justify-between border-b border-beigeDark pb-2">
+                    <span class="font-bold opacity-80">나눔 실천:</span>
+                    <span id="final-share-count" class="font-bold text-warmBrown text-base">0회</span>
+                </div>
+                <div class="flex justify-between border-b border-beigeDark pb-2">
+                    <span class="font-bold opacity-80">분리수거 실천:</span>
+                    <span id="final-recycle-count" class="font-bold text-warmBrown text-base">0회</span>
+                </div>
+                <div class="flex justify-between border-b border-beigeDark pb-2">
+                    <span class="font-bold opacity-80">탄소 절감량:</span>
+                    <span id="final-carbon" class="font-bold text-warmBrown font-gamja text-base">0.0 kg CO2</span>
+                </div>
+                <div class="flex justify-between items-center pt-1">
+                    <span class="font-bold opacity-80">지구 건강 상태:</span>
+                    <span id="final-earth-status" class="font-bold text-warmBrown text-base">지구가 방긋 웃어요! (1.0°C)</span>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-warmBrown hover:bg-deepBrown text-creamBg font-bold text-xl py-3 rounded-xl shadow transition transform active:scale-95 font-gaegu border border-beigeDark">
+                <i class="fa-solid fa-rotate-right mr-1"></i> 다시 시작하기
+            </button>
+            <a href="/" class="block mt-3 text-base underline font-gamja text-warmBrown">갤러리로 돌아가기 (수료증 확인)</a>
+        </div>
+    </div>
+
+    <!-- 갤러리 연결 -->
+    <script src="/gallery-sdk.js"></script>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Modal Helper Functions
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function toggleSound() {
+            audio.muted = !audio.muted;
+            const icon = document.getElementById('sound-icon');
+            if (icon) {
+                icon.className = audio.muted ? "fa-solid fa-volume-xmark text-xl text-warmBrown/50" : "fa-solid fa-volume-high text-xl";
+            }
+        }
+
+        // Cute Pastel Human SVG Characters Data
+        const CUTE_HUMAN_SVGS = [
+            {
+                name: '토끼귀 꼬마',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 18C18 5 26 0 28 12Z" fill="#FFC6FF"/>
+                    <path d="M43 18C47 5 39 0 37 12Z" fill="#FFC6FF"/>
+                    <circle cx="32.5" cy="28" r="16" fill="#FFD6A5"/>
+                    <circle cx="32.5" cy="28" r="14" fill="#FFE5EC"/>
+                    <circle cx="27" cy="27" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="27" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="30" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="30" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <path d="M29 32Q32.5 35 36 32" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M20 42L45 42L48 68L17 68Z" fill="#FFADAD" rx="4"/>
+                    <rect x="22" y="68" width="8" height="12" rx="4" fill="#B5EAD7"/>
+                    <rect x="35" y="68" width="8" height="12" rx="4" fill="#B5EAD7"/>
+                </svg>`
+            },
+            {
+                name: '모자 꼬마',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 26C16 16 49 16 49 26Z" fill="#A0C4FF"/>
+                    <rect x="12" y="24" width="41" height="5" rx="2.5" fill="#CAFFBF"/>
+                    <circle cx="32.5" cy="33" r="13" fill="#FFD6A5"/>
+                    <circle cx="27" cy="33" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="33" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="36" rx="2" ry="1" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="36" rx="2" ry="1" fill="#FFADAD"/>
+                    <path d="M29 37Q32.5 40 36 37" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M21 46L44 46L42 68L23 68Z" fill="#A0C4FF" rx="3"/>
+                    <rect x="22" y="68" width="8" height="12" rx="4" fill="#FFD6A5"/>
+                    <rect x="35" y="68" width="8" height="12" rx="4" fill="#FFD6A5"/>
+                </svg>`
+            },
+            {
+                name: '병아리 유치원생',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32.5" cy="22" r="15" fill="#FDFFB6"/>
+                    <circle cx="32.5" cy="30" r="13" fill="#FFD6A5"/>
+                    <circle cx="27" cy="30" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="30" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="33" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="33" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <path d="M29 34Q32.5 37 36 34" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M19 43L46 43L48 67L17 67Z" fill="#FDFFB6" rx="4"/>
+                    <rect x="22" y="67" width="8" height="13" rx="4" fill="#CAFFBF"/>
+                    <rect x="35" y="67" width="8" height="13" rx="4" fill="#CAFFBF"/>
+                </svg>`
+            },
+            {
+                name: '요리사 삼촌',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 22C20 12 45 12 45 22Z" fill="#E2F0CB"/>
+                    <circle cx="32.5" cy="15" r="10" fill="#E2F0CB"/>
+                    <circle cx="32.5" cy="30" r="13" fill="#FFD6A5"/>
+                    <circle cx="27" cy="30" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="30" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="33" rx="2" ry="1" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="33" rx="2" ry="1" fill="#FFADAD"/>
+                    <path d="M29 35Q32.5 38 36 35" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M20 43L45 43L46 68L19 68Z" fill="#C7CEEA" rx="3"/>
+                    <rect x="22" y="68" width="8" height="12" rx="4" fill="#FFB7B2"/>
+                    <rect x="35" y="68" width="8" height="12" rx="4" fill="#FFB7B2"/>
+                </svg>`
+            },
+            {
+                name: '새싹 꼬마',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M32.5 8C26 0 32.5 0 32.5 8Z" fill="#B5EAD7"/>
+                    <path d="M32.5 8C39 0 32.5 0 32.5 8Z" fill="#B5EAD7"/>
+                    <circle cx="32.5" cy="28" r="14" fill="#FFD6A5"/>
+                    <circle cx="27" cy="27" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="27" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="30" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="30" rx="2.5" ry="1.5" fill="#FFADAD"/>
+                    <path d="M29 31Q32.5 34 36 31" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M19 42L46 42L47 67L18 67Z" fill="#E2F0CB" rx="4"/>
+                    <rect x="22" y="67" width="8" height="13" rx="4" fill="#FFD6A5"/>
+                    <rect x="35" y="67" width="8" height="13" rx="4" fill="#FFD6A5"/>
+                </svg>`
+            },
+            {
+                name: '멜빵 꼬마',
+                svg: `<svg width="65" height="85" viewBox="0 0 65 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 25C18 17 47 17 47 25Z" fill="#FFB7B2"/>
+                    <circle cx="32.5" cy="31" r="13" fill="#FFD6A5"/>
+                    <circle cx="27" cy="31" r="2" fill="#4A3E3D"/>
+                    <circle cx="38" cy="31" r="2" fill="#4A3E3D"/>
+                    <ellipse cx="24" cy="34" rx="2" ry="1" fill="#FFADAD"/>
+                    <ellipse cx="41" cy="34" rx="2" ry="1" fill="#FFADAD"/>
+                    <path d="M29 35Q32.5 38 36 35" stroke="#4A3E3D" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M21 44L44 44L43 68L22 68Z" fill="#FFDAC1" rx="3"/>
+                    <rect x="25" y="44" width="3" height="24" fill="#FFB7B2"/>
+                    <rect x="37" y="44" width="3" height="24" fill="#FFB7B2"/>
+                    <rect x="22" y="68" width="8" height="12" rx="4" fill="#B5EAD7"/>
+                    <rect x="35" y="68" width="8" height="12" rx="4" fill="#B5EAD7"/>
+                </svg>`
+            }
+        ];
+
+        // Book Quiz Data
+        const BOOK_QUIZZES = [
+            {
+                q: "하늘에서 돈이 쏟아지게 해달라는 사람에게 요정이 준 것은?",
+                options: ["10원짜리 동전 🪙", "금괴 🪙"],
+                ans: 0
+            },
+            {
+                q: "처음에 사람들은 쓰레기통 요정을 좋아했나요?",
+                options: ["네", "아니요"],
+                ans: 1
+            },
+            {
+                q: "할머니 선물을 찾는 할아버지를 위해 요정이 자기 머리에서 선뜻 선물한 것은?",
+                options: ["장난감 보석 반지 💍", "꽃다발 💐"],
+                ans: 0
+            },
+            {
+                q: "요정이 사람들에게 신나게 외친 다정한 대사는?",
+                options: ["소원을 들어 드려요! ✨", "쓰레기 사세요! 🗑️"],
+                ans: 0
+            },
+            {
+                q: "아이를 위해 요정이 쓰레기 더미 속에서 열심히 찾아준 소중한 선물은?",
+                options: ["잃어버린 곰 인형 🧸", "새 컴퓨터 💻"],
+                ans: 0
+            }
+        ];
+
+        // Trash Items Data (옷 등장 확률 대폭 상향 및 종류 다양화!)
+        const TRASH_TYPES = [
+            { id: 'clothes', name: '헌 옷', emoji: '👕', category: 'fabric', wishBubble: '인형 옷 만들 편한 티셔츠!', carbon: 0.6, isClothing: true },
+            { id: 'dress', name: '예쁜 원피스', emoji: '👗', category: 'fabric', wishBubble: '입어보고 싶은 샤랄라 원피스!', carbon: 0.7, isClothing: true },
+            { id: 'coat', name: '따뜻한 점퍼', emoji: '🧥', category: 'fabric', wishBubble: '겨울에 입을 따뜻한 아우터!', carbon: 0.8, isClothing: true },
+            { id: 'cap', name: '귀여운 모자', emoji: '🧢', category: 'fabric', wishBubble: '햇빛을 가려줄 귀여운 모자!', carbon: 0.4, isClothing: true },
+            { id: 'pants', name: '청바지', emoji: '👖', category: 'fabric', wishBubble: '활동하기 편한 청바지!', carbon: 0.6, isClothing: true },
+            { id: 'box', name: '종이 박스', emoji: '📦', category: 'paper', wishBubble: '장난감 집 만들 상자!', carbon: 0.3 },
+            { id: 'pot', name: '양은 냄비', emoji: '🍲', category: 'metal', wishBubble: '소꿉놀이용 냄비!', carbon: 0.5 },
+            { id: 'bottle', name: '투명 페트병', emoji: '🍾', category: 'plastic', wishBubble: '화분으로 재활용할 병!', carbon: 0.2 },
+            { id: 'can', name: '음료수 캔', emoji: '🥫', category: 'metal', wishBubble: '연필꽂이로 쓸 수 있는 캔!', carbon: 0.4 },
+            { id: 'newspaper', name: '헌 신문지', emoji: '📰', category: 'paper', wishBubble: '종이비행기 만들 신문지!', carbon: 0.1 },
+            { id: 'milk', name: '우유팩', emoji: '🥛', category: 'paper', wishBubble: '주스 컵 만들 우유팩!', carbon: 0.2 },
+            { id: 'toy', name: '장난감 차', emoji: '🚗', category: 'plastic', wishBubble: '고쳐서 쓸 장난감 차!', carbon: 0.5 },
+            { id: 'doll', name: '버려진 곰인형', emoji: '🧸', category: 'fabric', wishBubble: '예쁘게 씻겨줄 인형!', carbon: 0.7, isClothing: true },
+            { id: 'glass', name: '유리병', emoji: '🫙', category: 'glass', wishBubble: '마법 시약병 만들 유리병!', carbon: 0.4 },
+            { id: 'cup', name: '플라스틱 컵', emoji: '🥤', category: 'plastic', wishBubble: '물감 컵으로 쓸 플라스틱!', carbon: 0.2 },
+            { id: 'book', name: '헌 그림책', emoji: '📚', category: 'paper', wishBubble: '읽고 싶었던 재미있는 그림책!', carbon: 0.3 }
+        ];
+
+        // State Variables
+        let score = 0;
+        let carbonSaved = 0.0;
+        let earthTemp = 1.0;
+        let combo = 0;
+        let shareCount = 0;
+        let recycleCount = 0;
+        let speedLevel = 1;
+        let lastQuizShareCount = 0;
+        let currentQuizIndex = 0;
+        let timeLeft = 180; // 3분 (180초) 타이머
+        let gameTimerInterval = null;
+        let personSpawnTimer = null;
+        let activePeople = [];
+        let isGameActive = false;
+        let isPausedForQuiz = false;
+        let recentSpawnedIds = []; // 최근 생성된 아이템 중복 방지용 배열
+        // Web Audio Synthesizer for SFX
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playPop() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+            playSuccess() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.4);
+            }
+            playRecycle() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.2);
+            }
+        }
+        const audio = new SoundEffects();
+
+        // DOM Elements
+        const scoreTextEl = document.getElementById('score-text');
+        const carbonTextEl = document.getElementById('carbon-text');
+        const tempTextEl = document.getElementById('temp-text');
+        const tempBarEl = document.getElementById('temp-bar');
+        const earthEmojiEl = document.getElementById('earth-emoji');
+        const earthStatusLabelEl = document.getElementById('earth-status-label');
+        const comboBadgeEl = document.getElementById('combo-badge');
+        const comboCountEl = document.getElementById('combo-count');
+        const sharedCountTextEl = document.getElementById('shared-count-text');
+        const speedLvlEl = document.getElementById('speed-lvl');
+        const fairyBubbleEl = document.getElementById('fairy-bubble');
+        const trashContainerEl = document.getElementById('trash-container');
+        const peopleTrackEl = document.getElementById('people-track');
+        const timerTextEl = document.getElementById('timer-text');
+
+        // UI Update Function
+        function updateUI() {
+            if (scoreTextEl) scoreTextEl.textContent = score;
+            if (carbonTextEl) carbonTextEl.textContent = carbonSaved.toFixed(1);
+            if (tempTextEl) tempTextEl.textContent = `${earthTemp.toFixed(1)} °C`;
+            if (sharedCountTextEl) sharedCountTextEl.textContent = shareCount;
+            if (speedLvlEl) speedLvlEl.textContent = speedLevel;
+
+            // Timer display update (MM:SS)
+            if (timerTextEl) {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerTextEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            // Update Thermometer Bar
+            if (tempBarEl) {
+                const tempPercent = Math.min(100, Math.max(10, earthTemp * 50));
+                tempBarEl.style.width = `${tempPercent}%`;
+            }
+
+            // Update Earth Status Label
+            if (earthStatusLabelEl && earthEmojiEl) {
+                if (earthTemp <= 0.4) {
+                    earthEmojiEl.textContent = '💖';
+                    earthStatusLabelEl.textContent = '지구가 정말 깨끗해요!';
+                } else if (earthTemp <= 0.8) {
+                    earthEmojiEl.textContent = '🌍';
+                    earthStatusLabelEl.textContent = '지구가 방긋 웃어요!';
+                } else {
+                    earthEmojiEl.textContent = '🤒';
+                    earthStatusLabelEl.textContent = '지구가 조금 아파요!';
+                }
+            }
+
+            // Combo Badge
+            if (comboBadgeEl && comboCountEl) {
+                if (combo > 1) {
+                    comboCountEl.textContent = combo;
+                    comboBadgeEl.classList.remove('hidden');
+                } else {
+                    comboBadgeEl.classList.add('hidden');
+                }
+            }
+        }
+
+        function checkSpeedIncrease() {
+            const totalActions = shareCount + recycleCount;
+            if (totalActions > 0 && totalActions % 4 === 0 && speedLevel < 5) {
+                speedLevel++;
+                updateUI();
+            }
+        }
+
+        function finishGameTrigger() {
+            triggerBookQuiz();
+            const continueBtn = document.getElementById('quiz-continue-btn');
+            if (continueBtn) {
+                continueBtn.textContent = '인증서 확인하기!';
+                continueBtn.onclick = () => {
+                    closeModal('quiz-modal');
+                    endGame();
+                };
+            }
+        }
+
+        function checkQuizTrigger() {
+            const totalActions = shareCount + recycleCount;
+            if (totalActions > 0 && totalActions % 5 === 0 && totalActions !== lastQuizShareCount) {
+                lastQuizShareCount = totalActions;
+                triggerBookQuiz();
+            }
+        }
+
+        function triggerBookQuiz() {
+            if (!isGameActive) return;
+            isPausedForQuiz = true;
+
+            const quiz = BOOK_QUIZZES[currentQuizIndex % BOOK_QUIZZES.length];
+            currentQuizIndex++;
+
+            document.getElementById('quiz-question-text').textContent = quiz.q;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            optionsContainer.classList.remove('hidden');
+
+            quiz.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "bg-beigeLight hover:bg-beigeMid border-2 border-beigeMid text-warmBrown font-bold text-xl py-3 px-2 rounded-2xl shadow transition transform active:scale-95 font-gaegu flex items-center justify-center";
+                btn.onclick = () => submitQuizAnswer(idx === quiz.ans);
+                btn.innerHTML = `<span>${optText}</span>`;
+                optionsContainer.appendChild(btn);
+            });
+
+            const resultMsg = document.getElementById('quiz-result-msg');
+            resultMsg.classList.add('hidden');
+            resultMsg.className = 'hidden text-xl font-bold p-3 rounded-xl mb-4 font-gaegu';
+            document.getElementById('quiz-continue-btn').classList.add('hidden');
+
+            openModal('quiz-modal');
+        }
+
+        function submitQuizAnswer(isCorrect) {
+            const resultMsg = document.getElementById('quiz-result-msg');
+            document.getElementById('quiz-options').classList.add('hidden');
+            resultMsg.classList.remove('hidden');
+            document.getElementById('quiz-continue-btn').classList.remove('hidden');
+
+            if (isCorrect) {
+                score += 150;
+                resultMsg.classList.add('bg-mutedGreen/20', 'text-mutedGreen', 'border-2', 'border-mutedGreen');
+                resultMsg.innerHTML = '🎉 <b>정답입니다! (+150P)</b><br><span class="text-sm font-normal">책 속 요정처럼 따뜻한 마음이에요!</span>';
+                audio.playSuccess();
+                triggerConfetti();
+            } else {
+                resultMsg.classList.add('bg-accentPeach/20', 'text-accentPeach', 'border-2', 'border-accentPeach');
+                resultMsg.innerHTML = '😅 <b>아쉬워요! 그림책을 다시 생각해봐요!</b>';
+                audio.playPop();
+            }
+            updateUI();
+        }
+
+        function closeQuizModal() {
+            closeModal('quiz-modal');
+            isPausedForQuiz = false;
+            // 3분 시간 만료 후 퀴즈 풀었을 경우 바로 게임 종료
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function startGame() {
+            closeModal('start-modal');
+            closeModal('gameover-modal');
+
+            score = 0;
+            carbonSaved = 0.0;
+            earthTemp = 1.0;
+            combo = 0;
+            shareCount = 0;
+            recycleCount = 0;
+            speedLevel = 1;
+            lastQuizShareCount = 0;
+            timeLeft = 180; // 3분 설정
+            activePeople = [];
+            isGameActive = true;
+            isPausedForQuiz = false;
+
+            const qBtn = document.getElementById('quiz-continue-btn');
+            if (qBtn) { qBtn.textContent = '계속 나눔하기!'; qBtn.onclick = closeQuizModal; }
+
+            trashContainerEl.innerHTML = '';
+            peopleTrackEl.innerHTML = '';
+
+            const fairyContainer = document.getElementById('fairy-container');
+            if (fairyContainer) fairyContainer.classList.remove('hidden');
+            fairyBubbleEl.innerHTML = "나랑 쓰레기 주인 찾자ㅏ 키키키!";
+
+            updateUI();
+
+            // 3분 타이머 시작
+            clearInterval(gameTimerInterval);
+            gameTimerInterval = setInterval(() => {
+                if (isGameActive && !isPausedForQuiz) {
+                    timeLeft--;
+                    updateUI();
+                    if (timeLeft <= 0) {
+                        clearInterval(gameTimerInterval);
+                        triggerBookQuiz(); // 3분 완료 시 퀴즈 나오면서 게임 마감
+                        const continueBtn = document.getElementById('quiz-continue-btn');
+                        if (continueBtn) {
+                            continueBtn.textContent = '인증서 확인하기!';
+                            continueBtn.onclick = () => {
+                                closeModal('quiz-modal');
+                                endGame();
+                            };
+                        }
+                    }
+                }
+            }, 1000);
+
+            clearInterval(personSpawnTimer);
+            personSpawnTimer = setInterval(spawnPerson, 1600);
+
+            // Spawns initial items
+            spawnTrashItem();
+            spawnTrashItem();
+            spawnTrashItem();
+
+            // Spawns initial walking people
+            spawnPerson();
+            setTimeout(() => spawnPerson(), 250);
+            setTimeout(() => spawnPerson(), 500);
+
+            requestAnimationFrame(updateWalkingPeople);
+
+            audio.playSuccess();
+        }
+
+        function handleTrashBinClick(e) {
+            if (e.target.closest('.trash-item')) return;
+            if (!isGameActive || isPausedForQuiz) return;
+
+            if (trashContainerEl.children.length >= 15) {
+                fairyBubbleEl.innerHTML = "🧺 <b>쓰레기통이 가득 찼어요! (15개)</b> 사람들에게 주거나 재활용해 주세요!";
+                audio.playPop();
+                return;
+            }
+
+            spawnTrashItem();
+        }
+
+        function spawnTrashItem() {
+            if (!isGameActive || isPausedForQuiz) return;
+            if (trashContainerEl.children.length >= 15) return;
+
+            // 중복 최소화 로직: 최근 생성된 아이템과 겹치지 않는 목록에서 선택
+            let candidateTypes = TRASH_TYPES.filter(t => !recentSpawnedIds.includes(t.id));
+            if (candidateTypes.length === 0) {
+                candidateTypes = TRASH_TYPES;
+            }
+
+            // 옷 종류 우선 확률 유지하면서 중복되지 않게 무작위 선택
+            let trashData;
+            const clothingCandidates = candidateTypes.filter(t => t.isClothing);
+            if (Math.random() < 0.5 && clothingCandidates.length > 0) {
+                trashData = clothingCandidates[Math.floor(Math.random() * clothingCandidates.length)];
+            } else {
+                trashData = candidateTypes[Math.floor(Math.random() * candidateTypes.length)];
+            }
+
+            // 최근 생성 기록 업데이트 (최대 3개 기억)
+            recentSpawnedIds.push(trashData.id);
+            if (recentSpawnedIds.length > 3) {
+                recentSpawnedIds.shift();
+            }
+
+            const itemElem = document.createElement('div');
+            const itemId = 'trash-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            
+            itemElem.id = itemId;
+            itemElem.className = 'trash-item absolute bg-creamBg border-2 border-beigeMid rounded-2xl p-2.5 shadow-md flex flex-col items-center justify-center animate-float hover:scale-105 select-none';
+            
+            // 깔끔한 5열 3행 격자 위치 계산 (겹침 완전 방지)
+            const currentCount = trashContainerEl.children.length;
+            const cols = 5;
+            const row = Math.floor(currentCount / cols);
+            const col = currentCount % cols;
+
+            const xPos = 4 + (col * 19);
+            const yPos = 6 + (row * 30);
+
+            itemElem.style.left = `${xPos}%`;
+            itemElem.style.top = `${yPos}%`;
+
+            itemElem.innerHTML = `
+                <span class="text-3xl pointer-events-none">${trashData.emoji}</span>
+                <span class="text-[11px] font-bold text-warmBrown pointer-events-none mt-0.5 leading-none">${trashData.name}</span>
+            `;
+
+            itemElem.dataset.trashId = trashData.id;
+            itemElem.dataset.category = trashData.category;
+            itemElem.dataset.carbon = trashData.carbon;
+
+            makeDraggable(itemElem);
+
+            trashContainerEl.appendChild(itemElem);
+            audio.playPop();
+        }
+
+        function makeDraggable(elem) {
+            let startX, startY, origX, origY;
+            let isDragging = false;
+
+            function onPointerDown(e) {
+                if (!isGameActive || isPausedForQuiz) return;
+                
+                // 이벤트 전파 중지 및 드래그 준비
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                audio.playPop();
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                startX = clientX;
+                startY = clientY;
+                const rect = elem.getBoundingClientRect();
+                origX = rect.left;
+                origY = rect.top;
+                isDragging = false;
+
+                elem.style.position = 'fixed';
+                elem.style.left = `${origX}px`;
+                elem.style.top = `${origY}px`;
+                elem.style.zIndex = '1000';
+                elem.style.width = `${rect.width}px`;
+                elem.style.height = `${rect.height}px`;
+
+                document.addEventListener('mousemove', onPointerMove, { passive: false });
+                document.addEventListener('mouseup', onPointerUp);
+                document.addEventListener('touchmove', onPointerMove, { passive: false });
+                document.addEventListener('touchend', onPointerUp);
+            }
+
+            function onPointerMove(e) {
+                if (e.cancelable) e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                    isDragging = true;
+                }
+
+                elem.style.left = `${origX + dx}px`;
+                elem.style.top = `${origY + dy}px`;
+            }
+
+            function onPointerUp(e) {
+                document.removeEventListener('mousemove', onPointerMove);
+                document.removeEventListener('mouseup', onPointerUp);
+                document.removeEventListener('touchmove', onPointerMove);
+                document.removeEventListener('touchend', onPointerUp);
+
+                const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+                checkDropTarget(elem, clientX, clientY);
+            }
+
+            elem.addEventListener('mousedown', onPointerDown);
+            elem.addEventListener('touchstart', onPointerDown, { passive: false });
+        }
+
+        // Reset trash position when dropped in invalid zone
+        function resetTrashPosition(trashElem) {
+            trashElem.style.position = 'absolute';
+            trashElem.style.left = '';
+            trashElem.style.top = '';
+            trashElem.style.zIndex = '10';
+            trashElem.style.width = '';
+            trashElem.style.height = '';
+        }
+
+        // Drop Zone Collision & Target Check Logic
+        function checkDropTarget(trashElem, dropX, dropY) {
+            const trashCategory = trashElem.dataset.category;
+            const trashId = trashElem.dataset.trashId;
+            const carbon = parseFloat(trashElem.dataset.carbon) || 0.3;
+
+            let droppedOnTarget = false;
+
+            // 1. Check Collision with Walking People (거리 나눔)
+            for (let i = 0; i < activePeople.length; i++) {
+                const person = activePeople[i];
+                const rect = person.elem.getBoundingClientRect();
+
+                // Drop coordinate falls within person card boundary
+                if (dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom) {
+                    droppedOnTarget = true;
+                    
+                    // Match check: Check if item ID or category matches person's request
+                    if (person.wantedItemId === trashId || person.wantedCategory === trashCategory) {
+                        handleShareSuccess(trashElem, person, carbon);
+                    } else {
+                        handleShareReject(trashElem, person);
+                    }
+                    break;
+                }
+            }
+
+            // 2. Check Collision with Specific Categorized Recycling Bins
+            if (!droppedOnTarget) {
+                const recycleBins = [
+                    { id: 'recycle-fabric', categories: ['fabric'] },
+                    { id: 'recycle-paper', categories: ['paper'] },
+                    { id: 'recycle-plastic', categories: ['plastic'] },
+                    { id: 'recycle-metal', categories: ['metal', 'glass'] }
+                ];
+
+                for (let binInfo of recycleBins) {
+                    const binElem = document.getElementById(binInfo.id);
+                    if (binElem) {
+                        const rect = binElem.getBoundingClientRect();
+                        if (dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom) {
+                            droppedOnTarget = true;
+                            if (binInfo.categories.includes(trashCategory)) {
+                                handleRecycleSuccess(trashElem, carbon);
+                            } else {
+                                handleRecycleReject(trashElem, binElem);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 3. Check Collision with Trash Container (쓰레기통 내에서 자유 이동)
+            if (!droppedOnTarget) {
+                const containerRect = trashContainerEl.getBoundingClientRect();
+                if (dropX >= containerRect.left && dropX <= containerRect.right &&
+                    dropY >= containerRect.top && dropY <= containerRect.bottom) {
+                    
+                    // 쓰레기통 영역 안이면 놓은 그 위치(절대좌표 -> 상대 퍼센트)에 그대로 고정!
+                    const relativeLeft = ((dropX - containerRect.left) / containerRect.width) * 100 - 5;
+                    const relativeTop = ((dropY - containerRect.top) / containerRect.height) * 100 - 10;
+
+                    trashElem.style.position = 'absolute';
+                    trashElem.style.left = `${Math.max(2, Math.min(85, relativeLeft))}%`;
+                    trashElem.style.top = `${Math.max(2, Math.min(75, relativeTop))}%`;
+                    trashElem.style.zIndex = '10';
+                    trashElem.style.width = '';
+                    trashElem.style.height = '';
+                    droppedOnTarget = true;
+                }
+            }
+
+            // 4. Reset position if dropped outside valid target zones
+            if (!droppedOnTarget) {
+                resetTrashPosition(trashElem);
+            }
+        }
+
+        function handleRecycleReject(trashElem, binElem) {
+            fairyBubbleEl.innerHTML = `😅 <b>이곳은 다른 재활용품을 넣는 곳이에요!</b> 분류 항목을 확인해 주세요!`;
+            binElem.classList.add('animate-bounce');
+            setTimeout(() => binElem.classList.remove('animate-bounce'), 500);
+            resetTrashPosition(trashElem);
+        }
+
+        function handleShareReject(trashElem, personObj) {
+            fairyBubbleEl.innerHTML = `😅 <b>${personObj.elem.querySelector('span').textContent}</b>: "이건 저한테 안 필요해요!"`;
+            
+            personObj.elem.classList.add('animate-bounce');
+            setTimeout(() => personObj.elem.classList.remove('animate-bounce'), 500);
+
+            resetTrashPosition(trashElem);
+        }
+
+        function handleShareSuccess(trashElem, personObj, carbon) {
+            trashElem.remove();
+            
+            const bonusPoints = 100;
+
+            combo++;
+            score += bonusPoints * combo;
+            carbonSaved += carbon;
+            earthTemp = Math.max(0.1, earthTemp - 0.05);
+            shareCount++;
+
+            fairyBubbleEl.innerHTML = `💖 <b>${personObj.elem.querySelector('span').textContent}</b>에게 꼭 필요한 물건 전달 성공! (+${bonusPoints * combo}P)`;
+            
+            personObj.elem.style.transform = 'scale(1.2)';
+            personObj.elem.style.opacity = '0';
+            setTimeout(() => {
+                personObj.elem.remove();
+                const idx = activePeople.findIndex(p => p.id === personObj.id);
+                if (idx !== -1) activePeople.splice(idx, 1);
+            }, 300);
+
+            audio.playSuccess();
+            triggerConfetti();
+            checkSpeedIncrease();
+            updateUI();
+            /* 자동 스폰 제거: 사용자가 쓰레기통을 누를 때만 생성되도록 처리 */
+            checkQuizTrigger();
+        }
+
+        function handleRecycleSuccess(trashElem, carbon) {
+            trashElem.remove();
+            combo++;
+            score += 80 * combo;
+            carbonSaved += carbon;
+            earthTemp = Math.max(0.1, earthTemp - 0.03);
+            recycleCount++;
+
+            fairyBubbleEl.innerHTML = `♻️ 올바른 분리수거 완성! (+${80 * combo}P)`;
+            audio.playRecycle();
+            checkSpeedIncrease();
+            updateUI();
+            /* 자동 스폰 제거: 사용자가 쓰레기통을 누를 때만 생성되도록 처리 */
+            checkQuizTrigger();
+        }
+        function checkQuizTrigger() {
+            const totalActions = shareCount + recycleCount;
+            /* 3개 실천할 때마다 퀴즈 등장 */
+            if (totalActions > 0 && totalActions % 3 === 0 && totalActions !== lastQuizShareCount) {
+                lastQuizShareCount = totalActions;
+                triggerBookQuiz();
+            }
+        }
+
+        function triggerBookQuiz() {
+            if (!isGameActive) return;
+            isPausedForQuiz = true;
+
+            /* 퀴즈가 겹치지 않고 순서대로 차례차례 나오도록 보장 */
+            const quizIndex = Math.max(0, Math.floor((lastQuizShareCount / 3) - 1)) % BOOK_QUIZZES.length;
+            const quiz = BOOK_QUIZZES[quizIndex];
+
+            document.getElementById('quiz-question-text').textContent = quiz.q;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            optionsContainer.classList.remove('hidden');
+
+            quiz.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "bg-beigeLight hover:bg-beigeMid border-2 border-beigeMid text-warmBrown font-bold text-xl py-3 px-2 rounded-2xl shadow transition transform active:scale-95 font-gaegu flex items-center justify-center";
+                btn.onclick = () => submitQuizAnswer(idx === quiz.ans);
+                btn.innerHTML = `<span>${optText}</span>`;
+                optionsContainer.appendChild(btn);
+            });
+
+            const resultMsg = document.getElementById('quiz-result-msg');
+            resultMsg.classList.add('hidden');
+            resultMsg.className = 'hidden text-xl font-bold p-3 rounded-xl mb-4 font-gaegu';
+            document.getElementById('quiz-continue-btn').classList.add('hidden');
+
+            openModal('quiz-modal');
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 25,
+                    spread: 60,
+                    origin: { y: 0.8 },
+                    colors: ['#81A38D', '#528265', '#E0927A', '#F4D35E']
+                });
+            }
+        }
+
+        function spawnPerson() {
+            if (!isGameActive || isPausedForQuiz) return;
+            if (activePeople.length >= 5) return;
+
+            const minSpawnDistance = 22;
+            const closestPersonAtStart = activePeople.find(p => p.posX < (-22 + minSpawnDistance));
+            if (closestPersonAtStart) return;
+
+            const personData = CUTE_HUMAN_SVGS[Math.floor(Math.random() * CUTE_HUMAN_SVGS.length)];
+            const wantedItem = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
+
+            const personElem = document.createElement('div');
+            const pId = 'person-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            personElem.id = pId;
+            personElem.className = 'person-card absolute bottom-0 flex flex-col items-center z-10 select-none';
+
+            let posX = -22;
+            personElem.style.left = `${posX}%`;
+
+            const baseSpeed = 0.035 + (speedLevel * 0.012);
+
+            personElem.innerHTML = `
+                <div class="bubble-arrow bg-creamBg border-2 border-beigeMid px-3 py-1 rounded-2xl shadow-sm mb-1 text-center relative max-w-[140px]">
+                    <span class="text-xs text-warmBrown font-bold block leading-tight">"${wantedItem.wishBubble}"</span>
+                    <span class="text-sm">${wantedItem.emoji}</span>
+                </div>
+                <div class="animate-cute-walk filter drop-shadow">
+                    ${personData.svg}
+                </div>
+                <span class="text-[11px] font-bold text-warmBrown bg-creamBg/90 border border-beigeMid rounded-full px-2 py-0.2 -mt-1 shadow-sm">
+                    ${personData.name}
+                </span>
+            `;
+
+            peopleTrackEl.appendChild(personElem);
+
+            activePeople.push({
+                id: pId,
+                elem: personElem,
+                posX: posX,
+                speed: baseSpeed,
+                wantedCategory: wantedItem.category,
+                wantedItemId: wantedItem.id
+            });
+        }
+
+        function updateWalkingPeople() {
+            if (isGameActive && !isPausedForQuiz) {
+                activePeople.sort((a, b) => b.posX - a.posX);
+
+                for (let i = 0; i < activePeople.length; i++) {
+                    const p = activePeople[i];
+                    const aheadPerson = activePeople[i - 1];
+                    let currentSpeed = p.speed;
+
+                    if (aheadPerson) {
+                        const gap = aheadPerson.posX - p.posX;
+                        if (gap < 18) {
+                            currentSpeed = Math.min(p.speed, aheadPerson.speed * 0.9);
+                        }
+                    }
+
+                    p.posX += currentSpeed;
+                    p.elem.style.left = `${p.posX}%`;
+                }
+
+                for (let i = activePeople.length - 1; i >= 0; i--) {
+                    if (activePeople[i].posX > 105) {
+                        activePeople[i].elem.remove();
+                        activePeople.splice(i, 1);
+                    }
+                }
+            }
+            requestAnimationFrame(updateWalkingPeople);
+        }
+
+        function endGame() {
+            const wasActive = isGameActive;
+            isGameActive = false;
+            clearInterval(personSpawnTimer);
+            clearInterval(gameTimerInterval);
+
+            document.getElementById('final-score').textContent = `${score} P`;
+            document.getElementById('final-share-count').textContent = `${shareCount}회`;
+            document.getElementById('final-recycle-count').textContent = `${recycleCount}회`;
+            document.getElementById('final-carbon').textContent = `${carbonSaved.toFixed(1)} kg CO2`;
+            document.getElementById('final-earth-status').textContent = `${earthStatusLabelEl.textContent} (${earthTemp.toFixed(1)}°C)`;
+
+            if (wasActive && window.GallerySDK) GallerySDK.reportScore('2026-picturebook-trash-fairy', score);
+
+            openModal('gameover-modal');
+            triggerConfetti();
+        }
+    </script>
+</body>
+</html>

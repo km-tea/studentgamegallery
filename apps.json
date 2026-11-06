@@ -1,0 +1,29 @@
+[
+  {
+    "id": "2026-math-gugudan",
+    "title": "구구단 게임",
+    "year": 2026,
+    "subject": "수학",
+    "maker": "샘플 (예시 앱)",
+    "description": "곱셈구구 5문제를 풀어 점수를 모으는 예시 앱이에요.",
+    "path": "2026/수학/구구단게임/",
+    "scoring": {
+      "max": 100,
+      "pass": 80,
+      "minPlays": 2
+    }
+  },
+  {
+    "id": "2026-picturebook-trash-fairy",
+    "title": "기요미 쓰레기 요정",
+    "year": 2026,
+    "subject": "그림책",
+    "maker": "",
+    "description": "쓰레기통 요정이 되어 물건을 필요한 친구에게 나누고, 분리수거도 해요. 그림책 퀴즈도 풀어 보세요.",
+    "path": "2026/그림책/기요미-쓰레기-요정/",
+    "scoring": {
+      "pass": 5000,
+      "minPlays": 2
+    }
+  }
+]
