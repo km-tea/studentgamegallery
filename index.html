@@ -74,11 +74,12 @@ function render(){
     var s=a.scoring,p=GallerySDK.getProgress(a.id),best=p?p.best:0,plays=p?p.plays:0,ok=GallerySDK.isPassed(a);
     var pct=s?Math.min(100,Math.round(best/s.pass*100)):0;
     var stamp=s?'<div class="stamp'+(ok?' done':'')+'">'+(ok?'수료':'도전')+'</div>':'';
-    var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+'점 · '+plays+'회 플레이<br>수료 조건: '+s.pass+'점 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
+    var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+(s.unit||'점')+' · '+plays+'회 플레이<br>수료 조건: '+s.pass+(s.unit||'점')+' 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
     var cert=s?(ok?'<a class="btn cert" href="certificate.html?id='+encodeURIComponent(a.id)+'">수료증 받기</a>':''):'';
     return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path)+'">플레이</a>'+cert+'</div></article>';
   }).join('');
 }
+window.addEventListener('pageshow',function(e){if(e.persisted&&apps.length)render()});
 fetch('apps.json').then(function(r){return r.json()}).then(function(d){apps=d;chips();render()})
 .catch(function(){grid.innerHTML='<p class="empty">apps.json을 불러오지 못했어요. 파일 위치와 형식을 확인해 주세요. (파일을 그냥 열면 안 되고, Netlify나 로컬 서버에서 열어야 해요.)</p>'});
 </script>

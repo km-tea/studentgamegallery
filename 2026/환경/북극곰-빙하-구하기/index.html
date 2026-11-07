@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>북극곰의 빙하 구하기 - Meltdown Polar Bear</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Jua', 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #0c192c;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.4);
+        }
+        /* Custom UI Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(15, 32, 67, 0.75);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+        }
+        /* Animated Water Gradient */
+        .ocean-bg {
+            background: linear-gradient(180deg, #0f2b48 0%, #07162c 100%);
+        }
+        /* Pulse Animation for Warning */
+        @keyframes ice-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .warning-pulse {
+            animation: ice-warning 0.8s infinite;
+        }
+    </style>
+<script src="/gallery-sdk.js"></script>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen ocean-bg p-2 md:p-4 relative">
+
+    <!-- Top UI Header -->
+    <div class="w-full max-w-4xl flex justify-between items-center mb-3 z-10 px-2">
+        <div class="flex items-center space-x-2 md:space-x-3">
+            <div class="glass-panel px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 border-cyan-400/30">
+                <i class="fa-solid fa-stopwatch text-cyan-300 text-lg md:text-xl"></i>
+                <div>
+                    <div class="text-[10px] md:text-xs text-cyan-200/70 uppercase font-bold">남은 시간</div>
+                    <div id="survivalTime" class="text-lg md:text-2xl font-black text-white">05:00.0</div>
+                </div>
+            </div>
+            <div class="glass-panel px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 border-yellow-400/30">
+                <i class="fa-solid fa-star text-yellow-400 text-lg md:text-xl"></i>
+                <div>
+                    <div class="text-[10px] md:text-xs text-yellow-200/70 uppercase font-bold">점수</div>
+                    <div id="score" class="text-lg md:text-2xl font-black text-yellow-300">0</div>
+                </div>
+            </div>
+            <!-- Current Mode & Difficulty Badge Display -->
+            <div id="currentGameInfoBadge" class="hidden sm:flex glass-panel px-3 py-2 rounded-2xl items-center gap-2 border-indigo-400/30">
+                <span id="badgeMode" class="text-xs font-bold text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded-lg border border-cyan-400/30">1P</span>
+                <span id="badgeDiff" class="text-xs font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-400/30">NORMAL</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 md:space-x-3">
+            <button id="leaderboardBtn" style="display:none" class="glass-panel hover:bg-white/10 text-amber-300 p-3 rounded-2xl transition duration-200 active:scale-95 flex items-center gap-2 font-bold text-sm">
+                <i class="fa-solid fa-trophy text-amber-400 text-xl"></i>
+                <span class="hidden sm:inline">랭킹</span>
+            </button>
+            <button id="pauseBtn" class="glass-panel hover:bg-white/10 text-white p-3 rounded-2xl transition duration-200 active:scale-95">
+                <i class="fa-solid fa-pause text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Container & Canvas -->
+    <div class="relative w-full max-w-4xl aspect-[4/3] flex items-center justify-center">
+        <canvas id="gameCanvas" class="w-full h-full rounded-3xl border-4 border-cyan-500/20"></canvas>
+
+        <!-- Touch Controls Overlay for Mobile -->
+        <div id="touchControls" class="absolute bottom-4 left-4 z-20 flex flex-col items-center gap-2 opacity-70 active:opacity-100">
+            <div class="flex justify-center">
+                <button id="btnW" class="w-14 h-14 bg-white/20 border border-white/40 rounded-2xl flex items-center justify-center text-white text-xl font-bold active:bg-cyan-500">W</button>
+            </div>
+            <div class="flex gap-2">
+                <button id="btnA" class="w-14 h-14 bg-white/20 border border-white/40 rounded-2xl flex items-center justify-center text-white text-xl font-bold active:bg-cyan-500">A</button>
+                <button id="btnS" class="w-14 h-14 bg-white/20 border border-white/40 rounded-2xl flex items-center justify-center text-white text-xl font-bold active:bg-cyan-500">S</button>
+                <button id="btnD" class="w-14 h-14 bg-white/20 border border-white/40 rounded-2xl flex items-center justify-center text-white text-xl font-bold active:bg-cyan-500">D</button>
+            </div>
+        </div>
+
+        <!-- Start Screen Overlay -->
+        <div id="startScreen" class="absolute inset-0 glass-panel rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30 overflow-y-auto">
+            <!-- Global Warming Warning Banner -->
+            <div class="w-full max-w-md bg-gradient-to-r from-red-500/30 via-amber-500/30 to-red-500/30 border-2 border-red-400/60 rounded-2xl p-2.5 mb-3 flex items-center justify-center gap-2 animate-bounce shadow-lg shadow-red-950/40">
+                <span class="text-xl">⚠️</span>
+                <span class="text-red-200 font-black text-sm sm:text-base tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    지구온난화 때문에 빙하가 녹기 시작했다!
+                </span>
+                <span class="text-xl">🔥</span>
+            </div>
+
+            <div class="w-16 h-16 mb-2 bg-cyan-500/20 rounded-full flex items-center justify-center border-2 border-cyan-300/40">
+                <span class="text-4xl">🐻‍❄️</span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-300 mb-2 drop-shadow-md">
+                녹는 빙하 피하기!
+            </h1>
+            <p class="text-cyan-200 text-xs md:text-sm max-w-md mb-3">
+                지구온난화로 빙하가 점점 녹고 있습니다! 바다에 빠지지 않도록 안전하게 이동하세요.
+            </p>
+
+            <!-- Mode & Difficulty Selection -->
+            <div class="w-full max-w-md space-y-3 mb-4">
+                <!-- Mode Choice -->
+                <div>
+                    <label class="block text-xs text-cyan-200/80 font-bold mb-1 text-left">게임 모드</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="mode1P" class="mode-btn py-2 px-3 rounded-xl border border-cyan-400 bg-cyan-500/30 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <span>🐻‍❄️ 1인 모드</span>
+                        </button>
+                        <button id="mode2P" class="mode-btn py-2 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <span>🐻‍❄️ vs 🐻 2인 모드</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile Control Option -->
+                <div>
+                    <label class="block text-xs text-cyan-200/80 font-bold mb-1 text-left">모바일 조작 방식</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="ctrlButtons" class="ctrl-btn py-1.5 px-3 rounded-xl border border-cyan-400 bg-cyan-500/30 text-cyan-200 font-bold text-xs transition">
+                            🔘 온스크린 버튼
+                        </button>
+                        <button id="ctrlTouchDrag" class="ctrl-btn py-1.5 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs transition">
+                            👆 화면 드래그 / 터치
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Difficulty Choice -->
+                <div>
+                    <label class="block text-xs text-cyan-200/80 font-bold mb-1 text-left">난이도 선택</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button data-diff="EASY" class="diff-btn py-1.5 rounded-lg border border-white/10 bg-slate-800/60 text-green-300 font-bold text-xs transition">이지</button>
+                        <button data-diff="NORMAL" class="diff-btn py-1.5 rounded-lg border border-cyan-400 bg-cyan-500/30 text-cyan-200 font-bold text-xs transition">노멀</button>
+                        <button data-diff="HARD" class="diff-btn py-1.5 rounded-lg border border-white/10 bg-slate-800/60 text-orange-300 font-bold text-xs transition">하드</button>
+                        <button data-diff="EXTREME" class="diff-btn py-1.5 rounded-lg border border-white/10 bg-slate-800/60 text-red-400 font-bold text-xs transition">익스트림</button>
+                    </div>
+                </div>
+
+                <!-- Nickname Inputs -->
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label for="nicknameInput" class="block text-xs text-cyan-200/80 font-bold mb-1 text-left">1P 닉네임 (WASD)</label>
+                        <input type="text" id="nicknameInput" maxlength="10" placeholder="1P 닉네임" class="w-full bg-slate-900/80 border border-cyan-400/40 rounded-xl px-3 py-1.5 text-white placeholder-cyan-200/40 focus:outline-none focus:border-cyan-300 text-center font-bold text-xs">
+                    </div>
+                    <div id="p2NickContainer" class="flex-1 hidden">
+                        <label for="nicknameInput2" class="block text-xs text-amber-200/80 font-bold mb-1 text-left">2P 닉네임 (방향키)</label>
+                        <input type="text" id="nicknameInput2" maxlength="10" placeholder="2P 닉네임" class="w-full bg-slate-900/80 border border-amber-400/40 rounded-xl px-3 py-1.5 text-white placeholder-amber-200/40 focus:outline-none focus:border-amber-300 text-center font-bold text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 max-w-md w-full mb-4 text-left text-xs">
+                <div class="bg-blue-900/40 p-2 rounded-xl border border-white/10 flex items-center gap-2">
+                    <span class="bg-cyan-500/30 px-1.5 py-0.5 rounded font-mono font-bold text-cyan-300 text-[10px]">1P:WASD / 2P:방향키</span>
+                    <span>조작 키</span>
+                </div>
+                <div class="bg-blue-900/40 p-2 rounded-xl border border-white/10 flex items-center gap-2">
+                    <span class="text-base">🐟</span>
+                    <span>점수 + 스피드</span>
+                </div>
+                <div class="bg-blue-900/40 p-2 rounded-xl border border-white/10 flex items-center gap-2">
+                    <span class="text-base">🧊</span>
+                    <span>빙하 타일 복구</span>
+                </div>
+                <div class="bg-blue-900/40 p-2 rounded-xl border border-white/10 flex items-center gap-2">
+                    <span class="text-base">☀️</span>
+                    <span>태양열 위험 피하기</span>
+                </div>
+            </div>
+
+            <button id="startBtn" class="px-8 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-black text-lg rounded-2xl shadow-lg hover:from-cyan-300 hover:to-blue-400 transform hover:scale-105 active:scale-95 transition duration-200 border border-white/30 flex items-center gap-3 cursor-pointer">
+                <i class="fa-solid fa-play"></i> 게임 시작하기
+            </button>
+        </div>
+
+        <!-- Leaderboard Modal Overlay -->
+        <div id="leaderboardScreen" class="absolute inset-0 glass-panel rounded-3xl flex flex-col items-center justify-center p-6 z-40 hidden">
+            <div class="flex justify-between items-center w-full max-w-md mb-4 border-b border-cyan-400/30 pb-3">
+                <div class="flex items-center gap-2 text-yellow-300 text-xl font-black">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>명예의 전당 (Top 10)</span>
+                </div>
+                <button id="closeLeaderboardBtn" class="text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+
+            <div id="leaderboardList" class="w-full max-w-md max-h-60 overflow-y-auto space-y-2 pr-1 mb-4">
+                <div class="text-center text-cyan-200/70 py-4">랭킹 정보를 불러오는 중...</div>
+            </div>
+
+            <button id="closeLeaderboardBtn2" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition duration-200 border border-white/10">
+                닫기
+            </button>
+        </div>
+
+        <!-- Game Over Screen Overlay -->
+        <div id="gameOverScreen" class="absolute inset-0 glass-panel rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30 hidden">
+            <div id="gameOverIcon" class="w-20 h-20 mb-3 bg-red-500/20 rounded-full flex items-center justify-center border-2 border-red-400/40 animate-bounce">
+                <span id="gameOverEmoji" class="text-5xl">🌊</span>
+            </div>
+            <h2 id="gameOverTitle" class="text-3xl md:text-4xl font-black text-red-400 mb-1">바다에 빠졌습니다!</h2>
+            <p id="gameOverSub" class="text-cyan-200 text-sm mb-4">빙하가 모두 녹아버렸어요 😭</p>
+
+            <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10 w-full max-w-xs mb-4 space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-400">결과 / 승자</span>
+                    <span id="finalPlayerName" class="text-base font-bold text-cyan-200">익명의 북극곰</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-t border-white/10 pt-2">
+                    <span class="text-gray-400">난이도</span>
+                    <span id="finalDifficulty" class="text-sm font-bold text-cyan-300">NORMAL</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-t border-white/10 pt-2">
+                    <span class="text-gray-400">최종 점수</span>
+                    <span id="finalScore" class="text-2xl font-black text-yellow-400">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-t border-white/10 pt-2">
+                    <span class="text-gray-400">생존 시간</span>
+                    <span id="finalTime" class="text-lg font-bold text-cyan-300">00:00.0</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="restartBtn" class="px-6 py-3.5 bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-black text-lg rounded-2xl shadow-lg hover:from-emerald-300 hover:to-teal-400 transform hover:scale-105 active:scale-95 transition duration-200 border border-white/30 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 다시 도전
+                </button>
+                <button id="showLeaderboardGameOverBtn" style="display:none" class="px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-yellow-300 font-bold rounded-2xl border border-yellow-400/30 transition duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i> 랭킹
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Buff Info Bar -->
+    <div id="buffContainer" class="w-full max-w-4xl mt-3 flex justify-center gap-3 min-h-[36px]">
+        <!-- Active Buff Badges Insertion via JS -->
+    </div>
+
+
+    <script>
+        // Game Configuration & Engine Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Touch Drag Control States
+        let mobileControlMode = 'BUTTONS'; // 'BUTTONS' or 'DRAG'
+        let touchDragActive = false;
+        let touchStartPos = { x: 0, y: 0 };
+        let touchCurrentPos = { x: 0, y: 0 };
+        let dragDir = { x: 0, y: 0 };
+
+        // 터치 기기가 아니면 화면 버튼 숨김 (태블릿은 화면이 커도 버튼 표시)
+        if (!window.matchMedia('(pointer: coarse)').matches) document.getElementById('touchControls').classList.add('hidden');
+
+        // Mobile Control UI Handlers
+        document.getElementById('ctrlButtons').addEventListener('click', () => {
+            mobileControlMode = 'BUTTONS';
+            document.getElementById('ctrlButtons').className = 'ctrl-btn py-1.5 px-3 rounded-xl border border-cyan-400 bg-cyan-500/30 text-cyan-200 font-bold text-xs transition';
+            document.getElementById('ctrlTouchDrag').className = 'ctrl-btn py-1.5 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs transition';
+            document.getElementById('touchControls').classList.remove('hidden');
+        });
+
+        document.getElementById('ctrlTouchDrag').addEventListener('click', () => {
+            mobileControlMode = 'DRAG';
+            document.getElementById('ctrlTouchDrag').className = 'ctrl-btn py-1.5 px-3 rounded-xl border border-cyan-400 bg-cyan-500/30 text-cyan-200 font-bold text-xs transition';
+            document.getElementById('ctrlButtons').className = 'ctrl-btn py-1.5 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs transition';
+            document.getElementById('touchControls').classList.add('hidden');
+        });
+
+        // Touch Canvas Drag Events
+        canvas.addEventListener('pointerdown', (e) => {
+            if (mobileControlMode !== 'DRAG' || gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            touchDragActive = true;
+            touchStartPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            touchCurrentPos = { ...touchStartPos };
+            dragDir = { x: 0, y: 0 };
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!touchDragActive || mobileControlMode !== 'DRAG') return;
+            const rect = canvas.getBoundingClientRect();
+            touchCurrentPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+            const dx = touchCurrentPos.x - touchStartPos.x;
+            const dy = touchCurrentPos.y - touchStartPos.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 5) {
+                dragDir.x = dx / dist;
+                dragDir.y = dy / dist;
+            } else {
+                dragDir = { x: 0, y: 0 };
+            }
+        });
+
+        const stopTouchDrag = () => {
+            touchDragActive = false;
+            dragDir = { x: 0, y: 0 };
+        };
+        canvas.addEventListener('pointerup', stopTouchDrag);
+        canvas.addEventListener('pointercancel', stopTouchDrag);
+        canvas.addEventListener('pointerleave', stopTouchDrag);
+
+        const GRID_ROWS = 10;
+        const GRID_COLS = 12;
+        let tileSize = 60;
+
+        // 화면(태블릿 가로/세로)에 맞춰 게임 영역 크기 조절
+        function fitStage(box, rw, rh, maxW) {
+            document.body.style.minHeight = '0';
+            document.body.style.height = window.innerHeight + 'px';
+            var bs = getComputedStyle(document.body), others = 0;
+            var padX = parseFloat(bs.paddingLeft) + parseFloat(bs.paddingRight);
+            var padY = parseFloat(bs.paddingTop) + parseFloat(bs.paddingBottom);
+            Array.prototype.forEach.call(document.body.children, function (el) {
+                if (el === box || el.tagName === 'SCRIPT') return;
+                var cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.position === 'absolute' || cs.position === 'fixed') return;
+                others += el.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+            });
+            var availH = window.innerHeight - padY - others - 2;
+            var availW = document.body.clientWidth - padX;
+            var w = Math.max(200, Math.min(maxW, availW, availH * rw / rh));
+            box.style.width = w + 'px';
+            box.style.height = (w * rh / rw) + 'px';
+            box.style.maxHeight = 'none';
+        }
+
+        function resizeCanvas() {
+            fitStage(canvas.parentElement, 4, 3, 896);
+            const container = canvas.parentElement;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            tileSize = Math.min(width / GRID_COLS, height / GRID_ROWS);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', function () { setTimeout(resizeCanvas, 200); });
+        resizeCanvas();
+
+        // Audio Effects Generator (Web Audio API)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, duration, type = 'sine', gainVal = 0.1) {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {
+                    console.log("Audio error:", e);
+                }
+            }
+            collect() {
+                this.playTone(523.25, 0.1); // C5
+                setTimeout(() => this.playTone(659.25, 0.15), 80); // E5
+            }
+            iceRestore() {
+                this.playTone(440, 0.1, 'triangle');
+                setTimeout(() => this.playTone(880, 0.2, 'triangle'), 100);
+            }
+            splash() {
+                this.playTone(150, 0.3, 'sawtooth', 0.2);
+                this.playTone(80, 0.4, 'sine', 0.3);
+            }
+            crack() {
+                this.playTone(200, 0.05, 'square', 0.05);
+            }
+            heatWarning() {
+                this.playTone(300, 0.1, 'sawtooth', 0.05);
+            }
+        }
+        const sound = new SoundFX();
+
+        // Player Nickname Load / Save local
+        let playerNickname = localStorage.getItem('polar_bear_nickname') || '';
+        if (playerNickname) {
+            document.getElementById('nicknameInput').value = playerNickname;
+        }
+
+        // Game State Variables
+        let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let score = 0;
+        let elapsedTime = 0;
+        let lastFrameTime = 0;
+        let meltTimer = 0;
+        let meltInterval = 1200; // Ice melt interval in ms (accelerates over time)
+
+        // Key Inputs Track
+        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false };
+
+        window.addEventListener('keydown', (e) => {
+            // Prevent space scroll or start if typing in input
+            if (document.activeElement === document.getElementById('nicknameInput')) return;
+
+            if (['w','a','s','d','W','A','S','D','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.key)) {
+                keys[e.key.toLowerCase()] = true;
+                if (e.key.startsWith('Arrow')) keys[e.key] = true;
+            }
+            // Spacebar for quick Start / Restart / Pause
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'START' || gameState === 'GAMEOVER') {
+                    startGame();
+                } else if (gameState === 'PLAYING') {
+                    togglePause();
+                } else if (gameState === 'PAUSED') {
+                    togglePause();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['w','a','s','d','W','A','S','D','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.key)) {
+                keys[e.key.toLowerCase()] = false;
+                if (e.key.startsWith('Arrow')) keys[e.key] = false;
+            }
+        });
+
+        // Touch Control Listeners
+        const setupTouchBtn = (id, key) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[key] = true; });
+            btn.addEventListener('pointerup', (e) => { e.preventDefault(); keys[key] = false; });
+            btn.addEventListener('pointerleave', (e) => { e.preventDefault(); keys[key] = false; });
+        };
+        setupTouchBtn('btnW', 'w');
+        setupTouchBtn('btnA', 'a');
+        setupTouchBtn('btnS', 's');
+        setupTouchBtn('btnD', 'd');
+
+        // Ice Grid Matrix Setup
+        let iceGrid = [];
+        let items = [];
+        let hazards = [];
+        let waterRipples = [];
+
+        function initIceGrid() {
+            iceGrid = [];
+            for (let r = 0; r < GRID_ROWS; r++) {
+                let row = [];
+                for (let c = 0; c < GRID_COLS; c++) {
+                    row.push({ state: 3 }); // 3: Normal Ice, 2: Cracked, 1: Severely Cracked, 0: Melted Water
+                }
+                iceGrid.push(row);
+            }
+        }
+        initIceGrid(); // Initialize ice grid early to prevent rendering errors before game start
+
+        // Collectible Items Class
+        class Collectible {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'FISH', 'ICE_CUBE'
+                this.floatOffset = Math.random() * Math.PI * 2;
+            }
+
+            update(delta) {
+                this.floatOffset += delta * 0.003;
+            }
+
+            draw() {
+                ctx.save();
+                const floatY = this.y + Math.sin(this.floatOffset) * 4;
+
+                ctx.font = `${tileSize * 0.5}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (this.type === 'FISH') {
+                    ctx.fillText('🐟', this.x, floatY);
+                } else if (this.type === 'ICE_CUBE') {
+                    ctx.fillText('🧊', this.x, floatY);
+                }
+                ctx.restore();
+            }
+        }
+
+        // Game Settings & Mode Config
+        let gameMode = '1P'; // '1P', '2P'
+        let selectedDifficulty = 'NORMAL'; // 'EASY', 'NORMAL', 'HARD', 'EXTREME'
+        const TOTAL_GAME_TIME = 300000; // 5분 (300,000 ms)
+
+        const DIFFICULTY_SETTINGS = {
+            EASY: { meltInterval: 2000, meltAccelerate: 2, baseSpeed: 4.2, hazardInterval: 8000, hazardWarning: 2800, label: '이지' },
+            NORMAL: { meltInterval: 1200, meltAccelerate: 8, baseSpeed: 3.8, hazardInterval: 5000, hazardWarning: 2000, label: '노멀' },
+            HARD: { meltInterval: 700, meltAccelerate: 15, baseSpeed: 3.5, hazardInterval: 3200, hazardWarning: 1400, label: '하드' },
+            EXTREME: { meltInterval: 350, meltAccelerate: 20, baseSpeed: 3.2, hazardInterval: 1800, hazardWarning: 900, label: '익스트림' }
+        };
+
+        // Mode and Difficulty Selector UI Handlers
+        document.getElementById('mode1P').addEventListener('click', () => {
+            gameMode = '1P';
+            document.getElementById('mode1P').className = 'mode-btn py-2 px-3 rounded-xl border border-cyan-400 bg-cyan-500/30 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition';
+            document.getElementById('mode2P').className = 'mode-btn py-2 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition';
+            document.getElementById('p2NickContainer').classList.add('hidden');
+        });
+
+        document.getElementById('mode2P').addEventListener('click', () => {
+            gameMode = '2P';
+            document.getElementById('mode2P').className = 'mode-btn py-2 px-3 rounded-xl border border-amber-400 bg-amber-500/30 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition';
+            document.getElementById('mode1P').className = 'mode-btn py-2 px-3 rounded-xl border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition';
+            document.getElementById('p2NickContainer').classList.remove('hidden');
+        });
+
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.diff-btn').forEach(b => {
+                    b.className = 'diff-btn py-1.5 rounded-lg border border-white/10 bg-slate-800/60 text-gray-300 font-bold text-xs transition';
+                });
+                selectedDifficulty = e.target.dataset.diff;
+                if (selectedDifficulty === 'EASY') e.target.className = 'diff-btn py-1.5 rounded-lg border border-green-400 bg-green-500/30 text-green-300 font-bold text-xs transition';
+                if (selectedDifficulty === 'NORMAL') e.target.className = 'diff-btn py-1.5 rounded-lg border border-cyan-400 bg-cyan-500/30 text-cyan-200 font-bold text-xs transition';
+                if (selectedDifficulty === 'HARD') e.target.className = 'diff-btn py-1.5 rounded-lg border border-orange-400 bg-orange-500/30 text-orange-300 font-bold text-xs transition';
+                if (selectedDifficulty === 'EXTREME') e.target.className = 'diff-btn py-1.5 rounded-lg border border-red-500 bg-red-500/30 text-red-300 font-bold text-xs transition';
+            });
+        });
+
+        // Player Bear Factory / Class
+        class Bear {
+            constructor(id, color, furColor, is2P = false) {
+                this.id = id;
+                this.color = color;
+                this.furColor = furColor;
+                this.is2P = is2P;
+                this.x = 0;
+                this.y = 0;
+                this.radius = 18;
+                this.speed = 3.5;
+                this.baseSpeed = 3.5;
+                this.facingRight = true;
+                this.speedBuffTimer = 0;
+                this.alive = true;
+            }
+
+            reset(startX, startY, speed) {
+                this.x = startX;
+                this.y = startY;
+                this.baseSpeed = speed;
+                this.speed = speed;
+                this.speedBuffTimer = 0;
+                this.alive = true;
+            }
+
+            update(delta) {
+                if (!this.alive) return;
+
+                let dx = 0;
+                let dy = 0;
+
+                if (!this.is2P) {
+                    if (mobileControlMode === 'DRAG' && touchDragActive) {
+                        dx = dragDir.x;
+                        dy = dragDir.y;
+                        if (dx > 0.1) this.facingRight = true;
+                        if (dx < -0.1) this.facingRight = false;
+                    } else {
+                        // 1P: WASD
+                        if (keys.w) dy -= 1;
+                        if (keys.s) dy += 1;
+                        if (keys.a) { dx -= 1; this.facingRight = false; }
+                        if (keys.d) { dx += 1; this.facingRight = true; }
+                        if (dx !== 0 && dy !== 0) {
+                            dx *= 0.7071;
+                            dy *= 0.7071;
+                        }
+                    }
+                } else {
+                    // 2P: Arrow Keys
+                    if (keys.ArrowUp) dy -= 1;
+                    if (keys.ArrowDown) dy += 1;
+                    if (keys.ArrowLeft) { dx -= 1; this.facingRight = false; }
+                    if (keys.ArrowRight) { dx += 1; this.facingRight = true; }
+                    if (dx !== 0 && dy !== 0) {
+                        dx *= 0.7071;
+                        dy *= 0.7071;
+                    }
+                }
+
+                if (this.speedBuffTimer > 0) {
+                    this.speedBuffTimer -= delta;
+                    this.speed = this.baseSpeed * 1.5;
+                } else {
+                    this.speed = this.baseSpeed;
+                }
+
+                this.x += dx * this.speed * (delta / 16);
+                this.y += dy * this.speed * (delta / 16);
+
+                this.x = Math.max(10, Math.min(canvas.width - 10, this.x));
+                this.y = Math.max(10, Math.min(canvas.height - 10, this.y));
+            }
+
+            draw() {
+                if (!this.alive) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (!this.facingRight) ctx.scale(-1, 1);
+
+                // Bear Shadow
+                ctx.beginPath();
+                ctx.ellipse(0, 12, 14, 6, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 20, 50, 0.3)';
+                ctx.fill();
+
+                if (this.speedBuffTimer > 0) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                }
+
+                // Bear Body
+                ctx.beginPath();
+                ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                ctx.fillStyle = this.furColor;
+                ctx.fill();
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Ears
+                ctx.beginPath();
+                ctx.arc(-11, -11, 6, 0, Math.PI * 2);
+                ctx.arc(11, -11, 6, 0, Math.PI * 2);
+                ctx.fillStyle = this.furColor;
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(-11, -11, 3, 0, Math.PI * 2);
+                ctx.arc(11, -11, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#f472b6';
+                ctx.fill();
+
+                // Eyes
+                ctx.beginPath();
+                ctx.arc(5, -4, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = this.furColor === '#ffffff' ? '#1e293b' : '#ffffff';
+                ctx.fill();
+
+                // Snout / Nose
+                ctx.beginPath();
+                ctx.ellipse(8, 2, 5, 4, 0, 0, Math.PI * 2);
+                ctx.fillStyle = this.furColor === '#ffffff' ? '#f1f5f9' : '#52525b';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(10, 1, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#0f172a';
+                ctx.fill();
+
+                // Cheeks
+                ctx.beginPath();
+                ctx.arc(3, 4, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(251, 113, 133, 0.5)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        const player1 = new Bear('1P', '#e2e8f0', '#ffffff', false);
+        const player2 = new Bear('2P', '#78350f', '#451a03', true);
+
+        class HeatHazard {
+            constructor(gridR, gridC, warningDuration = 2000) {
+                this.gridR = gridR;
+                this.gridC = gridC;
+                this.timer = warningDuration;
+                this.activeTimer = 1000;
+                this.state = 'WARNING';
+            }
+
+            update(delta) {
+                if (this.state === 'WARNING') {
+                    this.timer -= delta;
+                    if (this.timer <= 0) {
+                        this.state = 'ACTIVE';
+                        sound.heatWarning();
+                    }
+                } else if (this.state === 'ACTIVE') {
+                    this.activeTimer -= delta;
+                    if (this.activeTimer <= 0) {
+                        this.state = 'EXPIRED';
+                        if (iceGrid[this.gridR] && iceGrid[this.gridR][this.gridC]) {
+                            iceGrid[this.gridR][this.gridC].state = 0;
+                        }
+                    }
+                }
+            }
+
+            draw(offsetX, offsetY) {
+                const x = offsetX + this.gridC * tileSize;
+                const y = offsetY + this.gridR * tileSize;
+
+                ctx.save();
+                if (this.state === 'WARNING') {
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+
+                    ctx.font = `${tileSize * 0.4}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('☀️', x + tileSize / 2, y + tileSize / 2);
+                } else if (this.state === 'ACTIVE') {
+                    ctx.fillStyle = 'rgba(220, 38, 38, 0.6)';
+                    ctx.fillRect(x, y, tileSize, tileSize);
+
+                    ctx.fillStyle = 'rgba(253, 224, 71, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize * 0.35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // Spawn Mechanics
+        function spawnItem() {
+            const validTiles = [];
+            const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+            const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (iceGrid[r][c].state > 0) {
+                        validTiles.push({ r, c });
+                    }
+                }
+            }
+
+            if (validTiles.length > 0) {
+                const spot = validTiles[Math.floor(Math.random() * validTiles.length)];
+                const x = offsetX + spot.c * tileSize + tileSize / 2;
+                const y = offsetY + spot.r * tileSize + tileSize / 2;
+                const type = Math.random() < 0.65 ? 'FISH' : 'ICE_CUBE';
+
+                items.push(new Collectible(x, y, type));
+            }
+        }
+
+        function spawnHeatHazard() {
+            const config = DIFFICULTY_SETTINGS[selectedDifficulty];
+            const validTiles = [];
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (iceGrid[r][c].state > 0) {
+                        validTiles.push({ r, c });
+                    }
+                }
+            }
+
+            if (validTiles.length > 0) {
+                const spot = validTiles[Math.floor(Math.random() * validTiles.length)];
+                hazards.push(new HeatHazard(spot.r, spot.c, config.hazardWarning));
+            }
+        }
+
+        // Melting Mechanics
+        function processIceMelting(delta) {
+            const config = DIFFICULTY_SETTINGS[selectedDifficulty];
+            meltTimer += delta;
+            if (meltTimer >= meltInterval) {
+                meltTimer = 0;
+
+                if (meltInterval > 300) meltInterval -= config.meltAccelerate;
+
+                let candidateTiles = [];
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    for (let c = 0; c < GRID_COLS; c++) {
+                        if (iceGrid[r][c].state > 0) {
+                            candidateTiles.push({ r, c, state: iceGrid[r][c].state });
+                        }
+                    }
+                }
+
+                if (candidateTiles.length > 0) {
+                    const chosen = candidateTiles[Math.floor(Math.random() * candidateTiles.length)];
+                    iceGrid[chosen.r][chosen.c].state--;
+                    sound.crack();
+
+                    if (iceGrid[chosen.r][chosen.c].state === 0) {
+                        const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+                        const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+                        waterRipples.push({
+                            x: offsetX + chosen.c * tileSize + tileSize / 2,
+                            y: offsetY + chosen.r * tileSize + tileSize / 2,
+                            radius: 5,
+                            alpha: 1
+                        });
+                    }
+                }
+            }
+        }
+
+        function checkBearOnIce(p) {
+            if (!p.alive) return false;
+            const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+            const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+            const gridC = Math.floor((p.x - offsetX) / tileSize);
+            const gridR = Math.floor((p.y - offsetY) / tileSize);
+
+            if (gridR < 0 || gridR >= GRID_ROWS || gridC < 0 || gridC >= GRID_COLS) {
+                return false;
+            }
+
+            return iceGrid[gridR][gridC].state > 0;
+        }
+
+        function restoreIceAroundPlayer(p) {
+            const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+            const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+            const gridC = Math.floor((p.x - offsetX) / tileSize);
+            const gridR = Math.floor((p.y - offsetY) / tileSize);
+
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = gridR + dr;
+                    const nc = gridC + dc;
+                    if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                        iceGrid[nr][nc].state = 3;
+                    }
+                }
+            }
+        }
+
+        function drawIceGrid() {
+            const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+            const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+            if (!iceGrid || iceGrid.length === 0) return;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                if (!iceGrid[r]) continue;
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const tile = iceGrid[r][c];
+                    if (!tile) continue;
+                    const x = offsetX + c * tileSize;
+                    const y = offsetY + r * tileSize;
+
+                    if (tile.state > 0) {
+                        ctx.save();
+                        
+                        let iceGradient = ctx.createLinearGradient(x, y, x + tileSize, y + tileSize);
+                        if (tile.state === 3) {
+                            iceGradient.addColorStop(0, '#e0f2fe');
+                            iceGradient.addColorStop(1, '#bae6fd');
+                        } else if (tile.state === 2) {
+                            iceGradient.addColorStop(0, '#bae6fd');
+                            iceGradient.addColorStop(1, '#7dd3fc');
+                        } else {
+                            iceGradient.addColorStop(0, '#7dd3fc');
+                            iceGradient.addColorStop(1, '#38bdf8');
+                        }
+
+                        ctx.fillStyle = iceGradient;
+                        ctx.beginPath();
+                        ctx.roundRect(x + 1, y + 1, tileSize - 2, tileSize - 2, 8);
+                        ctx.fill();
+
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        if (tile.state < 3) {
+                            ctx.strokeStyle = 'rgba(15, 23, 42, 0.35)';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(x + tileSize * 0.2, y + tileSize * 0.2);
+                            ctx.lineTo(x + tileSize * 0.5, y + tileSize * 0.5);
+                            ctx.lineTo(x + tileSize * 0.8, y + tileSize * 0.3);
+                            if (tile.state === 1) {
+                                ctx.moveTo(x + tileSize * 0.5, y + tileSize * 0.5);
+                                ctx.lineTo(x + tileSize * 0.4, y + tileSize * 0.85);
+                            }
+                            ctx.stroke();
+                        }
+
+                        ctx.restore();
+                    } else {
+                        ctx.fillStyle = 'rgba(7, 89, 133, 0.2)';
+                        ctx.fillRect(x, y, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        function drawWaterEffects(time) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < 5; i++) {
+                const yPos = (canvas.height / 5) * i + (Math.sin(time * 0.002 + i) * 10);
+                ctx.beginPath();
+                ctx.moveTo(0, yPos);
+                ctx.quadraticCurveTo(canvas.width / 2, yPos + 15, canvas.width, yPos);
+                ctx.stroke();
+            }
+
+            waterRipples.forEach((rp, index) => {
+                ctx.beginPath();
+                ctx.arc(rp.x, rp.y, rp.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(186, 230, 253, ${rp.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                rp.radius += 0.8;
+                rp.alpha -= 0.02;
+
+                if (rp.alpha <= 0) waterRipples.splice(index, 1);
+            });
+
+            // Draw Touch Drag Indicator on Canvas
+            if (mobileControlMode === 'DRAG' && touchDragActive) {
+                ctx.beginPath();
+                ctx.arc(touchStartPos.x, touchStartPos.y, 30, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(touchStartPos.x, touchStartPos.y);
+                ctx.lineTo(touchCurrentPos.x, touchCurrentPos.y);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(touchCurrentPos.x, touchCurrentPos.y, 14, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function updateBuffUI() {
+            const container = document.getElementById('buffContainer');
+            container.innerHTML = '';
+
+            if (player1.alive && player1.speedBuffTimer > 0) {
+                const badge = document.createElement('div');
+                badge.className = 'glass-panel px-3 py-1 rounded-xl flex items-center gap-2 border-cyan-400/40 text-cyan-200 text-xs font-bold animate-pulse';
+                badge.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300"></i> 1P 속도업 (${Math.ceil(player1.speedBuffTimer / 1000)}s)`;
+                container.appendChild(badge);
+            }
+            if (gameMode === '2P' && player2.alive && player2.speedBuffTimer > 0) {
+                const badge2 = document.createElement('div');
+                badge2.className = 'glass-panel px-3 py-1 rounded-xl flex items-center gap-2 border-amber-400/40 text-amber-200 text-xs font-bold animate-pulse';
+                badge2.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300"></i> 2P 속도업 (${Math.ceil(player2.speedBuffTimer / 1000)}s)`;
+                container.appendChild(badge2);
+            }
+        }
+
+        let player1Name = '1P 북극곰';
+        let player2Name = '2P 흑곰';
+
+        // Reset Game
+        function startGame() {
+            sound.init();
+
+            // Save player nickname
+            const inputNick = document.getElementById('nicknameInput').value.trim();
+            player1Name = inputNick || (gameMode === '2P' ? '1P 북극곰' : '익명의 북극곰');
+            localStorage.setItem('polar_bear_nickname', player1Name);
+
+            if (gameMode === '2P') {
+                const inputNick2 = document.getElementById('nicknameInput2').value.trim();
+                player2Name = inputNick2 || '2P 흑곰';
+            }
+
+            const diffConfig = DIFFICULTY_SETTINGS[selectedDifficulty];
+
+            // Update Header Badges
+            const badgeMode = document.getElementById('badgeMode');
+            const badgeDiff = document.getElementById('badgeDiff');
+            if (badgeMode && badgeDiff) {
+                badgeMode.innerText = gameMode === '1P' ? '🐻‍❄️ 1P' : '🐻‍❄️ vs 🐻 2P';
+                badgeDiff.innerText = diffConfig.label;
+            }
+
+            initIceGrid();
+            player1.reset(canvas.width / (gameMode === '2P' ? 3 : 2), canvas.height / 2, diffConfig.baseSpeed);
+            if (gameMode === '2P') {
+                player2.reset((canvas.width / 3) * 2, canvas.height / 2, diffConfig.baseSpeed);
+            }
+
+            items = [];
+            hazards = [];
+            waterRipples = [];
+            score = 0;
+            meltInterval = diffConfig.meltInterval;
+            meltTimer = 0;
+            elapsedTime = 0;
+            lastFrameTime = performance.now();
+            gameState = 'PLAYING';
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('score').innerText = '0';
+            document.getElementById('survivalTime').innerText = '05:00.0';
+            document.getElementById('pauseBtn').innerHTML = '<i class="fa-solid fa-pause text-xl"></i>';
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pauseBtn').innerHTML = '<i class="fa-solid fa-play text-xl"></i>';
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                lastFrameTime = performance.now();
+                document.getElementById('pauseBtn').innerHTML = '<i class="fa-solid fa-pause text-xl"></i>';
+            }
+        }
+
+        // Game Over Handler
+        function gameOver(winnerMsg, isVictory = false) {
+            const alreadyOver = (gameState === 'GAMEOVER');
+            gameState = 'GAMEOVER';
+            if (isVictory) {
+                sound.collect();
+            } else {
+                sound.splash();
+            }
+
+            const remainingMs = Math.max(0, TOTAL_GAME_TIME - elapsedTime);
+            const formattedTime = formatTime(remainingMs);
+            let displayTitle = winnerMsg || player1Name;
+
+            const gameOverTitle = document.getElementById('gameOverTitle');
+            const gameOverSub = document.getElementById('gameOverSub');
+            const gameOverEmoji = document.getElementById('gameOverEmoji');
+
+            if (isVictory) {
+                gameOverTitle.innerText = "5분 생존 성공! 🎉";
+                gameOverTitle.className = "text-3xl md:text-4xl font-black text-emerald-400 mb-1";
+                gameOverSub.innerText = "녹는 빙하 위에서 끝까지 버텨냈습니다!";
+                gameOverEmoji.innerText = "🏆";
+            } else {
+                gameOverTitle.innerText = winnerMsg ? winnerMsg : "바다에 빠졌습니다!";
+                gameOverTitle.className = "text-3xl md:text-4xl font-black text-red-400 mb-1";
+                gameOverSub.innerText = "빙하가 녹아 바다로 빠져버렸어요 😭";
+                gameOverEmoji.innerText = "🌊";
+            }
+
+            document.getElementById('finalPlayerName').innerText = displayTitle;
+            document.getElementById('finalDifficulty').innerText = DIFFICULTY_SETTINGS[selectedDifficulty].label;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalTime').innerText = formattedTime;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+
+            // 갤러리 점수 기록 (1인 모드만)
+            if (!alreadyOver && gameMode === '1P' && window.GallerySDK) GallerySDK.reportScore('2026-env-polar-bear', score);
+        }
+
+        function openLeaderboard() {
+            document.getElementById('leaderboardScreen').classList.remove('hidden');
+            if (window.fetchLeaderboard) {
+                window.fetchLeaderboard();
+            }
+        }
+
+        function closeLeaderboard() {
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+        }
+
+        function formatTime(ms) {
+            const totalSec = Math.max(0, ms / 1000);
+            const mins = Math.floor(totalSec / 60).toString().padStart(2, '0');
+            const secs = Math.floor(totalSec % 60).toString().padStart(2, '0');
+            const tenths = Math.floor((totalSec % 1) * 10);
+            return `${mins}:${secs}.${tenths}`;
+        }
+
+        // Main Loop
+        let itemSpawnTimer = 0;
+        let hazardSpawnTimer = 0;
+
+        function gameLoop(timestamp) {
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const delta = Math.min(timestamp - lastFrameTime, 100);
+            lastFrameTime = timestamp;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawWaterEffects(timestamp);
+
+            if (gameState === 'PLAYING') {
+                const diffConfig = DIFFICULTY_SETTINGS[selectedDifficulty];
+                elapsedTime += delta;
+
+                const remainingTime = Math.max(0, TOTAL_GAME_TIME - elapsedTime);
+                document.getElementById('survivalTime').innerText = formatTime(remainingTime);
+
+                // 5분 타임아웃 생존 성공 조건
+                if (remainingTime <= 0) {
+                    score += 1000; // 생존 성공 보너스
+                    gameOver("5분 완주 성공!", true);
+                    return;
+                }
+
+                player1.update(delta);
+                if (gameMode === '2P') player2.update(delta);
+
+                processIceMelting(delta);
+
+                // Check Bear drowning
+                if (player1.alive && !checkBearOnIce(player1)) {
+                    player1.alive = false;
+                    waterRipples.push({ x: player1.x, y: player1.y, radius: 10, alpha: 1 });
+                }
+                if (gameMode === '2P' && player2.alive && !checkBearOnIce(player2)) {
+                    player2.alive = false;
+                    waterRipples.push({ x: player2.x, y: player2.y, radius: 10, alpha: 1 });
+                }
+
+                // Win/Loss Condition Check
+                if (gameMode === '1P') {
+                    if (!player1.alive) gameOver();
+                } else {
+                    if (!player1.alive && !player2.alive) {
+                        gameOver("무승부 (모두 탈락)");
+                    } else if (!player1.alive) {
+                        gameOver(`🏆 ${player2Name} (2P 흑곰) 승리!`);
+                    } else if (!player2.alive) {
+                        gameOver(`🏆 ${player1Name} (1P 북극곰) 승리!`);
+                    }
+                }
+
+                itemSpawnTimer += delta;
+                if (itemSpawnTimer > 3500) {
+                    itemSpawnTimer = 0;
+                    if (items.length < 5) spawnItem();
+                }
+
+                hazardSpawnTimer += delta;
+                if (hazardSpawnTimer > diffConfig.hazardInterval) {
+                    hazardSpawnTimer = 0;
+                    if (hazards.length < 4) spawnHeatHazard();
+                }
+
+                // Collect Items Check
+                const checkItemPickup = (p) => {
+                    if (!p.alive) return;
+                    items.forEach((item, index) => {
+                        item.update(delta);
+                        const dist = Math.hypot(p.x - item.x, p.y - item.y);
+                        if (dist < p.radius + 15) {
+                            if (item.type === 'FISH') {
+                                score += 100;
+                                p.speedBuffTimer = 4000;
+                                sound.collect();
+                            } else if (item.type === 'ICE_CUBE') {
+                                score += 150;
+                                restoreIceAroundPlayer(p);
+                                sound.iceRestore();
+                            }
+                            document.getElementById('score').innerText = score;
+                            items.splice(index, 1);
+                        }
+                    });
+                };
+
+                checkItemPickup(player1);
+                if (gameMode === '2P') checkItemPickup(player2);
+
+                const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+                const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+                hazards.forEach((hz, index) => {
+                    hz.update(delta);
+
+                    if (hz.state === 'ACTIVE') {
+                        const hzX = offsetX + hz.gridC * tileSize + tileSize / 2;
+                        const hzY = offsetY + hz.gridR * tileSize + tileSize / 2;
+
+                        if (player1.alive && Math.hypot(player1.x - hzX, player1.y - hzY) < tileSize * 0.4) {
+                            player1.alive = false;
+                        }
+                        if (gameMode === '2P' && player2.alive && Math.hypot(player2.x - hzX, player2.y - hzY) < tileSize * 0.4) {
+                            player2.alive = false;
+                        }
+                    }
+
+                    if (hz.state === 'EXPIRED') {
+                        hazards.splice(index, 1);
+                    }
+                });
+
+                updateBuffUI();
+            }
+
+            drawIceGrid();
+
+            const offsetX = (canvas.width - GRID_COLS * tileSize) / 2;
+            const offsetY = (canvas.height - GRID_ROWS * tileSize) / 2;
+
+            hazards.forEach(hz => hz.draw(offsetX, offsetY));
+            items.forEach(item => item.draw());
+
+            if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                player1.draw();
+                if (gameMode === '2P') player2.draw();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event Listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+        document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
+        document.getElementById('showLeaderboardGameOverBtn').addEventListener('click', openLeaderboard);
+        document.getElementById('closeLeaderboardBtn').addEventListener('click', closeLeaderboard);
+        document.getElementById('closeLeaderboardBtn2').addEventListener('click', closeLeaderboard);
+
+        // Initialize Loop on Load
+        window.onload = () => {
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

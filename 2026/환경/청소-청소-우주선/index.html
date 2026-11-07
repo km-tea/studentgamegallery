@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>청소 청소 - 우주선 만들기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Jua', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #1a202c;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        canvas {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            background-color: #14532d;
+            border-radius: 1rem;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
+        }
+        .touch-btn {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .touch-btn:active {
+            transform: scale(0.9);
+            filter: brightness(1.2);
+        }
+    </style>
+<script src="/gallery-sdk.js"></script>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen p-2 md:p-4 text-white select-none">
+
+    <!-- Header UI -->
+    <div class="w-full max-w-4xl flex justify-between items-center mb-1 px-3 py-1.5 bg-slate-800 rounded-2xl shadow-lg border-2 border-slate-700">
+        </div>
+        
+        <!-- Scoreboard / Status -->
+        <div class="flex space-x-4 text-sm sm:text-base">
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-xl border border-yellow-500/30 flex items-center space-x-2">
+                <span class="text-xl">🌳</span>
+                <div>
+                    <div class="text-xs text-slate-400">구출한 나무</div>
+                    <div class="font-bold text-yellow-300"><span id="partCount">0</span> / 70</div>
+                </div>
+            </div>
+            <div class="bg-slate-900/80 px-3 py-1.5 rounded-xl border border-red-500/30 flex items-center space-x-2">
+                <span class="text-xl">💥</span>
+                <div>
+                    <div class="text-xs text-slate-400">피격 횟수</div>
+                    <div class="font-bold text-red-400"><span id="hitCount">0</span> / 50</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Game Container -->
+    <div class="relative w-full max-w-4xl aspect-[4/3] max-h-[75vh]">
+        <canvas id="gameCanvas" class="w-full h-full block border-4 border-amber-800/60"></canvas>
+        
+        <!-- Interactive Prompt Overlay -->
+    <div id="interactionPrompt" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-12 bg-yellow-400 text-slate-900 px-4 py-1.5 rounded-full font-bold text-lg shadow-xl border-2 border-white animate-bounce pointer-events-none z-10 flex items-center gap-1">
+        <span class="bg-slate-900 text-white px-2 py-0.5 rounded text-sm">E</span> <span id="promptText">줍기</span>
+    </div>
+
+    <!-- Bonus Notification Popup -->
+    <div id="bonusPopup" class="hidden absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-12 bg-amber-400 text-slate-900 px-6 py-2 rounded-2xl font-extrabold text-2xl shadow-2xl border-4 border-yellow-100 animate-bounce pointer-events-none z-20 flex items-center gap-2">
+        <span class="text-3xl">⭐</span> <span id="bonusText">+5 대박!</span>
+    </div>
+
+    <!-- Start Overlay UI Button -->
+    <div id="startOverlay" class="absolute inset-0 bg-slate-900/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-30 rounded-2xl">
+        <div class="text-6xl mb-3 animate-bounce">🐿️🪓</div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-green-400 mb-2 drop-shadow-md">청소 청소 - 숲을 지켜라!</h1>
+        <p class="text-base md:text-lg text-slate-200 mb-1">도끼를 든 태너 아저씨들이 아름다운 나무들을 벨고 있어요!</p>
+        <p class="text-sm md:text-base text-slate-300 mb-6 max-w-md">
+            위기에 처한 나무 <span class="text-yellow-300 font-bold">70개</span>를 모아 레이저 총을 완성하고<br>
+            도끼를 든 태너 아저씨들을 퇴치하여 숲의 환경을 구해주세요!
+        </p>
+
+        <button id="btnStartGame" class="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-2xl text-slate-900 transition-all duration-200 bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl shadow-xl hover:from-green-300 hover:to-emerald-400 active:scale-95 border-4 border-green-200 cursor-pointer">
+            <span class="flex items-center gap-2">
+                <span>숲 구하러 가기</span>
+                <span class="text-3xl transition-transform group-hover:translate-x-1">🍃</span>
+            </span>
+        </button>
+        <p class="text-xs text-slate-400 mt-4">키보드 [E] 키 또는 화면 터치로도 시작할 수 있어요!</p>
+    </div>
+
+    </div>
+
+    <!-- Touch Controls for Mobile/Tablet -->
+    <div class="w-full max-w-4xl mt-2 flex justify-between items-center px-2 z-20">
+        <!-- D-Pad Left Side -->
+        <div class="relative w-36 h-36 sm:w-44 sm:h-44 bg-slate-900/80 p-2 rounded-full backdrop-blur-md shadow-2xl border-2 border-slate-700/80 grid grid-cols-3 gap-1 touch-btn">
+            <div></div>
+            <button id="btnUp" class="touch-btn bg-slate-700 active:bg-yellow-500 rounded-t-2xl text-2xl flex items-center justify-center text-white active:scale-90 transition-all select-none">▲</button>
+            <div></div>
+            <button id="btnLeft" class="touch-btn bg-slate-700 active:bg-yellow-500 rounded-l-2xl text-2xl flex items-center justify-center text-white active:scale-90 transition-all select-none">◄</button>
+            <div class="bg-slate-800 rounded-full flex items-center justify-center text-xs text-slate-400 font-bold">MOVE</div>
+            <button id="btnRight" class="touch-btn bg-slate-700 active:bg-yellow-500 rounded-r-2xl text-2xl flex items-center justify-center text-white active:scale-90 transition-all select-none">►</button>
+            <div></div>
+            <button id="btnDown" class="touch-btn bg-slate-700 active:bg-yellow-500 rounded-b-2xl text-2xl flex items-center justify-center text-white active:scale-90 transition-all select-none">▼</button>
+            <div></div>
+        </div>
+
+        <!-- Action Button Right Side -->
+        <div class="flex flex-col items-center gap-1">
+            <button id="btnAction" class="touch-btn w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-yellow-400 via-amber-500 to-amber-600 active:from-yellow-300 active:to-amber-500 border-4 border-yellow-200 rounded-full font-black text-slate-900 shadow-2xl flex flex-col items-center justify-center active:scale-90 transition-all select-none">
+                <span class="text-3xl sm:text-4xl">✋</span>
+                <span class="text-sm sm:text-base font-extrabold mt-0.5">상호작용</span>
+            </button>
+            <span class="text-[10px] sm:text-xs text-yellow-300 font-bold">E 키 / 터치</span>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio Synthesizer for SFX ---
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playPickup() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playBuild() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(900, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playLaunch() {
+                if (!this.ctx) return;
+                // Noise buffer for rocket rumble
+                const bufferSize = this.ctx.sampleRate * 2;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2);
+                noise.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            playWinFanfare() {
+                if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + idx * 0.12 + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundSystem();
+
+        // --- Game Setup & State ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Virtual Internal Resolution
+        const WORLD_WIDTH = 1000;
+        const WORLD_HEIGHT = 750;
+        canvas.width = WORLD_WIDTH;
+        canvas.height = WORLD_HEIGHT;
+
+        // 화면(태블릿 가로/세로)에 맞춰 게임 영역 크기 조절
+        function fitStage(box, rw, rh, maxW) {
+            document.body.style.minHeight = '0';
+            document.body.style.height = window.innerHeight + 'px';
+            var bs = getComputedStyle(document.body), others = 0;
+            var padX = parseFloat(bs.paddingLeft) + parseFloat(bs.paddingRight);
+            var padY = parseFloat(bs.paddingTop) + parseFloat(bs.paddingBottom);
+            Array.prototype.forEach.call(document.body.children, function (el) {
+                if (el === box || el.tagName === 'SCRIPT') return;
+                var cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.position === 'absolute' || cs.position === 'fixed') return;
+                others += el.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+            });
+            var availH = window.innerHeight - padY - others - 2;
+            var availW = document.body.clientWidth - padX;
+            var w = Math.max(200, Math.min(maxW, availW, availH * rw / rh));
+            box.style.width = w + 'px';
+            box.style.height = (w * rh / rw) + 'px';
+            box.style.maxHeight = 'none';
+        }
+        function fitGame() { fitStage(canvas.parentElement, 4, 3, 896); }
+        window.addEventListener('resize', fitGame);
+        window.addEventListener('orientationchange', function () { setTimeout(fitGame, 200); });
+        fitGame();
+
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER', 'VICTORY'
+        let keys = {};
+        let touchKeys = { w: false, a: false, s: false, d: false, e: false };
+        let animFrame = 0;
+
+        // Game Entities State
+        let player = {
+            x: 100,
+            y: 375,
+            size: 38,
+            speed: 5.8,
+            direction: 1, // 1: right, -1: left
+            isMoving: false,
+            invulnerableTimer: 0,
+            animFrame: 0,
+            hasGun: false, // 부품 70개 수집 시 true
+            shootTimer: 0
+        };
+
+        // 태너 아저씨 3명 관리
+        const TANNER_CONFIGS = [
+            { shirt: '#475569', overalls: '#1e293b', hat: '#451a03' },
+            { shirt: '#dc2626', overalls: '#7f1d1d', hat: '#451a03' },
+            { shirt: '#2563eb', overalls: '#1e3a8a', hat: '#1e293b' }
+        ];
+
+        let tanners = [];
+        let enemyBullets = [];
+        let playerBullets = [];
+
+        let partsInventory = 0;
+        let hitsTaken = 0;
+        const MAX_HITS = 50;
+        const TARGET_PARTS = 70;
+
+        let trashItems = [];
+        let particles = [];
+        let victoryTimer = 0;
+
+        // Trash/Tree Items Types (나무 & 자연 아이템)
+        const TRASH_TYPES = [
+            { name: '아기 나무', emoji: '🌳', color: '#15803d' },
+            { name: '통나무', emoji: '🪵', color: '#854d0e' },
+            { name: '소나무', emoji: '🌲', color: '#166534' },
+            { name: '버섯', emoji: '🍄', color: '#ef4444' },
+            { name: '나뭇잎', emoji: '🍃', color: '#22c55e' }
+        ];
+
+        // --- Event Listeners ---
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'e') {
+                handleInteraction();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Touch Control Bindings
+        function setupTouchControl(elementId, keyName) {
+            const btn = document.getElementById(elementId);
+            if (!btn) return;
+            
+            const startHandler = (e) => {
+                e.preventDefault();
+                touchKeys[keyName] = true;
+                if (keyName === 'e') handleInteraction();
+            };
+            const endHandler = (e) => {
+                e.preventDefault();
+                touchKeys[keyName] = false;
+            };
+
+            btn.addEventListener('touchstart', startHandler, { passive: false });
+            btn.addEventListener('touchend', endHandler, { passive: false });
+            btn.addEventListener('touchcancel', endHandler, { passive: false });
+            btn.addEventListener('mousedown', startHandler);
+            btn.addEventListener('mouseup', endHandler);
+            btn.addEventListener('mouseleave', endHandler);
+        }
+
+        setupTouchControl('btnUp', 'w');
+        setupTouchControl('btnLeft', 'a');
+        setupTouchControl('btnDown', 's');
+        setupTouchControl('btnRight', 'd');
+        setupTouchControl('btnAction', 'e');
+
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+            startGameWithSound();
+        });
+
+        function startGameWithSound() {
+            sound.init();
+            initGame();
+        }
+
+        // --- Game Initialization ---
+        function initGame() {
+            runReported = false;
+            gameState = 'PLAYING';
+            partsInventory = 0;
+            hitsTaken = 0;
+            enemyBullets = [];
+            playerBullets = [];
+            particles = [];
+            victoryTimer = 0;
+
+            player.x = 100;
+            player.y = WORLD_HEIGHT / 2;
+            player.invulnerableTimer = 0;
+            player.hasGun = false;
+            player.shootTimer = 0;
+
+            // Initialize 3 Tanner enemies
+            tanners = TANNER_CONFIGS.map((cfg, idx) => ({
+                id: idx,
+                x: 400 + idx * 180,
+                y: 150 + idx * 200,
+                size: 42,
+                speed: 3.2,
+                colorConfig: cfg,
+                direction: -1,
+                shootTimer: Math.random() * 60,
+                hp: 100
+            }));
+
+            // Generate initial trash items
+            trashItems = [];
+            for (let i = 0; i < 35; i++) {
+                spawnTrashItem();
+            }
+
+            updateUI();
+            updateOverlayUI();
+        }
+
+        function spawnTrashItem() {
+            const margin = 80;
+            const type = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
+            trashItems.push({
+                x: margin + Math.random() * (WORLD_WIDTH - margin * 2),
+                y: margin + Math.random() * (WORLD_HEIGHT - margin * 2),
+                size: 26,
+                type: type
+            });
+        }
+
+        function updateOverlayUI() {
+            const overlay = document.getElementById('startOverlay');
+            if (gameState === 'PLAYING') {
+                overlay.classList.add('hidden');
+            } else {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function showBonusPopup(text) {
+            const popup = document.getElementById('bonusPopup');
+            document.getElementById('bonusText').innerText = text;
+            popup.classList.remove('hidden');
+            setTimeout(() => {
+                popup.classList.add('hidden');
+            }, 1200);
+        }
+
+        function updateUI() {
+            document.getElementById('partCount').innerText = partsInventory;
+            document.getElementById('hitCount').innerText = hitsTaken;
+        }
+
+        // --- Interaction Logic ---
+        function handleInteraction() {
+            if (gameState === 'START' || gameState === 'GAMEOVER' || gameState === 'VICTORY') {
+                startGameWithSound();
+                return;
+            }
+
+            // Pick up nearest trash item
+            let closestDist = 65;
+            let targetIdx = -1;
+
+            trashItems.forEach((item, idx) => {
+                const dist = Math.hypot(player.x - item.x, player.y - item.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    targetIdx = idx;
+                }
+            });
+
+            if (targetIdx !== -1) {
+                trashItems.splice(targetIdx, 1);
+                sound.playPickup();
+
+                // 30% Chance to get +5 Bonus Parts
+                if (Math.random() < 0.30) {
+                    partsInventory += 5;
+                    showBonusPopup('+5 대박 획득! ⭐');
+                } else {
+                    partsInventory += 1;
+                }
+
+                // 50% Chance to spawn additional Tanner
+                if (Math.random() < 0.50) {
+                    const extraColors = [
+                        { shirt: '#059669', overalls: '#064e3b', hat: '#1e293b' },
+                        { shirt: '#d97706', overalls: '#78350f', hat: '#451a03' },
+                        { shirt: '#9333ea', overalls: '#581c87', hat: '#1e293b' }
+                    ];
+                    const cfg = extraColors[Math.floor(Math.random() * extraColors.length)];
+                    tanners.push({
+                        id: tanners.length,
+                        x: Math.random() < 0.5 ? 50 : WORLD_WIDTH - 50,
+                        y: Math.random() * (WORLD_HEIGHT - 100) + 50,
+                        size: 42,
+                        speed: 3.0 + Math.random() * 0.8,
+                        colorConfig: cfg,
+                        direction: 1,
+                        shootTimer: 0,
+                        hp: 100
+                    });
+                }
+
+                // Give Laser Gun when reaching 70 parts
+                if (partsInventory >= TARGET_PARTS && !player.hasGun) {
+                    player.hasGun = true;
+                    sound.playBuild();
+                    showBonusPopup('환경 정화 레이저 총 획득! 🔫⚡');
+                }
+
+                // Maintain trash quantity on field
+                if (trashItems.length < 25) {
+                    spawnTrashItem();
+                }
+
+                updateUI();
+                createParticles(player.x, player.y, '#f59e0b', 10);
+            }
+        }
+
+        // --- Game Update Logic ---
+        function update() {
+            if (gameState !== 'PLAYING') {
+                if (gameState === 'VICTORY') {
+                    victoryTimer++;
+                }
+                return;
+            }
+
+            animFrame++;
+
+            // Player Movement
+            let moveX = 0;
+            let moveY = 0;
+
+            if (keys['w'] || keys['arrowup'] || touchKeys.w) moveY -= 1;
+            if (keys['s'] || keys['arrowdown'] || touchKeys.s) moveY += 1;
+            if (keys['a'] || keys['arrowleft'] || touchKeys.a) moveX -= 1;
+            if (keys['d'] || keys['arrowright'] || touchKeys.d) moveX += 1;
+
+            if (moveX !== 0 && moveY !== 0) {
+                moveX *= 0.7071;
+                moveY *= 0.7071;
+            }
+
+            if (moveX !== 0 || moveY !== 0) {
+                player.isMoving = true;
+                player.x += moveX * player.speed;
+                player.y += moveY * player.speed;
+                if (moveX !== 0) player.direction = moveX > 0 ? 1 : -1;
+            } else {
+                player.isMoving = false;
+            }
+
+            // Keep Player In Bounds
+            player.x = Math.max(player.size, Math.min(WORLD_WIDTH - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(WORLD_HEIGHT - player.size, player.y));
+
+            // Player Auto-Shooting when Gun is equipped
+            if (player.hasGun) {
+                player.shootTimer++;
+                if (player.shootTimer >= 15) {
+                    player.shootTimer = 0;
+                    // Shoot laser toward nearest Tanner
+                    let targetTanner = null;
+                    let minDist = 1000;
+                    tanners.forEach(t => {
+                        const d = Math.hypot(t.x - player.x, t.y - player.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            targetTanner = t;
+                        }
+                    });
+
+                    let angle = player.direction === 1 ? 0 : Math.PI;
+                    if (targetTanner) {
+                        angle = Math.atan2(targetTanner.y - player.y, targetTanner.x - player.x);
+                    }
+
+                    playerBullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(angle) * 12,
+                        vy: Math.sin(angle) * 12,
+                        size: 6
+                    });
+                    sound.playPickup();
+                }
+            }
+
+            // Update Player Bullets
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const b = playerBullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Hit Tanner
+                for (let j = tanners.length - 1; j >= 0; j--) {
+                    const t = tanners[j];
+                    if (Math.hypot(b.x - t.x, b.y - t.y) < t.size) {
+                        createParticles(t.x, t.y, '#22c55e', 12);
+                        tanners.splice(j, 1);
+                        playerBullets.splice(i, 1);
+                        sound.playHit();
+
+                        // Victory check: all Tanners defeated after collecting 70 parts
+                        if (tanners.length === 0 && partsInventory >= TARGET_PARTS) {
+                            gameState = 'VICTORY';
+                            sound.playWinFanfare();
+                            reportRun(true);
+                        }
+                        break;
+                    }
+                }
+
+                if (b && (b.x < 0 || b.x > WORLD_WIDTH || b.y < 0 || b.y > WORLD_HEIGHT)) {
+                    playerBullets.splice(i, 1);
+                }
+            }
+
+            // Invulnerability timer
+            if (player.invulnerableTimer > 0) {
+                player.invulnerableTimer--;
+            }
+
+            // Update Tanners & Enemy Bullets
+            tanners.forEach((tanner) => {
+                // Move towards player
+                const dx = player.x - tanner.x;
+                const dy = player.y - tanner.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 0) {
+                    tanner.x += (dx / dist) * tanner.speed;
+                    tanner.y += (dy / dist) * tanner.speed;
+                    tanner.direction = dx > 0 ? 1 : -1;
+                }
+
+                // Check Tanner Collision with Player
+                if (dist < player.size + tanner.size * 0.6 && player.invulnerableTimer === 0) {
+                    triggerPlayerHit();
+                }
+
+                // Tanner Axe Attack / Shot Range
+                tanner.shootTimer++;
+                if (tanner.shootTimer >= 80) {
+                    tanner.shootTimer = 0;
+                    const angle = Math.atan2(player.y - tanner.y, player.x - tanner.x);
+                    
+                    // Tanner Axe-throw Laser Bullet
+                    enemyBullets.push({
+                        x: tanner.x,
+                        y: tanner.y,
+                        vx: Math.cos(angle) * 7,
+                        vy: Math.sin(angle) * 7,
+                        size: 9
+                    });
+                }
+            });
+
+            // Update Enemy Bullets
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const eb = enemyBullets[i];
+                eb.x += eb.vx;
+                eb.y += eb.vy;
+
+                // Check bullet collision with player
+                if (Math.hypot(eb.x - player.x, eb.y - player.y) < player.size && player.invulnerableTimer === 0) {
+                    triggerPlayerHit();
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+
+                if (eb.x < 0 || eb.x > WORLD_WIDTH || eb.y < 0 || eb.y > WORLD_HEIGHT) {
+                    enemyBullets.splice(i, 1);
+                }
+            }
+
+            // Update Particles
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+                if (p.alpha <= 0) particles.splice(index, 1);
+            });
+
+            // Check Interaction Prompt Visibility
+            let canInteract = false;
+            trashItems.forEach((item) => {
+                if (Math.hypot(player.x - item.x, player.y - item.y) < 65) {
+                    canInteract = true;
+                }
+            });
+
+            const prompt = document.getElementById('interactionPrompt');
+            if (canInteract) {
+                prompt.classList.remove('hidden');
+            } else {
+                prompt.classList.add('hidden');
+            }
+        }
+
+        // 갤러리 점수 기록: 부품 1개 = 1점(최대 70), 클리어 보너스 30점 → 최대 100점
+        var runReported = false;
+        function reportRun(victory) {
+            if (runReported || !window.GallerySDK) return;
+            runReported = true;
+            GallerySDK.reportScore('2026-env-clean-spaceship', Math.min(partsInventory, TARGET_PARTS) + (victory ? 30 : 0));
+        }
+
+        function triggerPlayerHit() {
+            hitsTaken++;
+            player.invulnerableTimer = 60; // 1 second invincibility
+            sound.playHit();
+            createParticles(player.x, player.y, '#ef4444', 15);
+            updateUI();
+
+            if (hitsTaken >= MAX_HITS) {
+                gameState = 'GAMEOVER';
+                reportRun(false);
+            }
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: 4 + Math.random() * 4,
+                    color: color,
+                    alpha: 1.0
+                });
+            }
+        }
+
+        // --- Render Functions ---
+        function render() {
+            ctx.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+            drawForestBackground();
+            drawTrashItems();
+            drawPlayerBullets();
+            drawEnemyBullets();
+            drawTanners();
+            drawPlayer();
+            drawParticles();
+
+            if (gameState === 'GAMEOVER') {
+                drawGameOverScreen();
+            } else if (gameState === 'VICTORY') {
+                drawVictoryScreen();
+            }
+        }
+
+        function drawForestBackground() {
+            // Forest Grass
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+            // Trees
+            ctx.fillStyle = '#166534';
+            for (let x = 40; x < WORLD_WIDTH; x += 160) {
+                ctx.beginPath();
+                ctx.arc(x, 40, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x, WORLD_HEIGHT - 40, 50, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawTrashItems() {
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '24px serif';
+
+            trashItems.forEach((item) => {
+                ctx.fillStyle = item.type.color;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillText(item.type.emoji, item.x, item.y);
+            });
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            // Flash effect when invulnerable
+            if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer / 5) % 2 === 0) {
+                ctx.globalAlpha = 0.4;
+            }
+
+            if (player.direction === -1) {
+                ctx.scale(-1, 1);
+            }
+
+            // Squirrel Body
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.arc(8, -10, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail
+            ctx.fillStyle = '#92400e';
+            ctx.beginPath();
+            ctx.ellipse(-16, -8, 14, 8, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes & Ears
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(12, -12, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.arc(4, -20, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Laser Gun
+            if (player.hasGun) {
+                ctx.fillStyle = '#0284c7';
+                ctx.fillRect(8, -2, 16, 6);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(20, -4, 6, 10);
+            }
+
+            ctx.restore();
+        }
+
+        function drawTanners() {
+            tanners.forEach((t) => {
+                ctx.save();
+                ctx.translate(t.x, t.y);
+
+                if (t.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+
+                // Body
+                ctx.fillStyle = t.colorConfig.shirt;
+                ctx.fillRect(-12, -10, 24, 26);
+
+                // Overalls
+                ctx.fillStyle = t.colorConfig.overalls;
+                ctx.fillRect(-10, 6, 20, 16);
+
+                // Head
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(0, -18, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hat
+                ctx.fillStyle = t.colorConfig.hat;
+                ctx.fillRect(-14, -28, 28, 6);
+
+                // Axe in hand (도끼)
+                ctx.fillStyle = '#78350f'; // Axe Handle
+                ctx.fillRect(8, -10, 4, 22);
+                
+                ctx.fillStyle = '#94a3b8'; // Axe Blade
+                ctx.beginPath();
+                ctx.moveTo(12, -14);
+                ctx.lineTo(22, -8);
+                ctx.lineTo(12, -2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        function drawEnemyBullets() {
+            ctx.fillStyle = '#f97316';
+            enemyBullets.forEach((b) => {
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.font = '16px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🪓', 0, 0);
+                ctx.restore();
+            });
+        }
+
+        function drawPlayerBullets() {
+            ctx.fillStyle = '#38bdf8';
+            playerBullets.forEach((b) => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach((p) => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawGameOverScreen() {
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 48px Jua';
+            ctx.fillText('땅굴에 빠졌습니다! 🕳️', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 30);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Jua';
+            ctx.fillText('태너 아저씨에게 50번 맞았습니다. 다시 도전하세요!', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 20);
+            ctx.fillText('[E] 키 또는 화면 터치로 다시 시작', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 70);
+        }
+
+        function drawVictoryScreen() {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+            ctx.save();
+            ctx.translate(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 40);
+
+            // Somersault Flip Animation
+            const rotation = (victoryTimer * 0.15);
+            ctx.rotate(rotation);
+
+            // Squirrel Victory Pose
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.arc(0, 0, 35, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#4ade80';
+            ctx.font = 'bold 56px Jua';
+            ctx.fillText('✌️ 고마워! ✌️', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 60);
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '28px Jua';
+            ctx.fillText('아름다운 숲의 환경을 지켜냈습니다!', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 120);
+            ctx.fillText('[E] 키 또는 화면 터치로 다시 하기', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 170);
+        }
+
+        // --- Main Game Loop ---
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

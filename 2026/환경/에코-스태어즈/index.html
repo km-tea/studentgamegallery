@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>에코 스태어즈 (Eco Stairs)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+        * {
+            font-family: 'Jua', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #05130b;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 32, 23, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(74, 222, 128, 0.25);
+        }
+
+        .btn-active-scale {
+            transition: transform 0.08s ease, filter 0.08s ease;
+        }
+
+        .btn-active-scale:active {
+            transform: scale(0.92);
+            filter: brightness(1.2);
+        }
+
+        .btn-green-glow {
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+
+        .animate-pulse-soft {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+
+        /* Prevent scrolling on mobile */
+        html, body {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+<script src="/gallery-sdk.js"></script>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center relative overflow-hidden">
+
+    <!-- CANVAS BACKGROUND & GAME ENGINE -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0 block"></canvas>
+
+    <!-- HUD OVERLAY (TOP) -->
+    <div id="game-hud" class="relative z-10 w-full max-w-lg px-5 pt-4 flex flex-col gap-2 pointer-events-none">
+        <!-- TOP RES BAR -->
+        <div class="flex justify-between items-center w-full">
+            <div class="flex items-center gap-2 bg-slate-900/90 px-3.5 py-1.5 rounded-2xl border border-emerald-500/40 backdrop-blur-md pointer-events-auto">
+                <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
+                <span id="hud-coins" class="text-sm font-black text-emerald-300">0</span>
+            </div>
+
+            <!-- SCORE BOARD -->
+            <div class="flex flex-col items-center">
+                <span id="hud-score" class="text-4xl md:text-5xl font-black text-amber-300 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-wider">0</span>
+                <span id="hud-combo" class="text-xs text-cyan-300 font-extrabold opacity-0 transition-opacity">10 COMBO!</span>
+            </div>
+
+            <div class="flex items-center gap-2 bg-slate-900/90 px-3.5 py-1.5 rounded-2xl border border-amber-500/40 backdrop-blur-md pointer-events-auto">
+                <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+                <span id="hud-highscore" class="text-sm font-black text-amber-300">BEST 0</span>
+            </div>
+        </div>
+
+        <!-- ENERGY / TIME BAR -->
+        <div id="energy-bar-container" class="w-full h-4 bg-slate-950/80 rounded-full border-2 border-emerald-500/40 p-0.5 overflow-hidden shadow-inner hidden">
+            <div id="energy-bar-fill" class="h-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 rounded-full transition-all duration-75" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- MAIN LOBBY MENU -->
+    <div id="view-lobby" class="relative z-20 w-full max-w-md h-full flex flex-col justify-between items-center p-6 text-center">
+        <div class="mt-8 flex flex-col items-center">
+            <div class="px-4 py-1.5 bg-emerald-950/90 rounded-full border border-emerald-400/60 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-2 shadow-lg flex items-center gap-1.5">
+                <i class="fa-solid fa-earth-americas text-emerald-400"></i> 무한의 친환경 계단
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-green-400 drop-shadow-md">
+                에코 스태어즈
+            </h1>
+            <p class="text-xs text-slate-300 mt-1">지구를 살리는 깨끗한 계단을 올라보세요!</p>
+        </div>
+
+        <!-- CHARACTER DISPLAY SELECTOR -->
+        <div class="my-auto w-full glass-panel rounded-3xl p-5 border-2 border-emerald-500/40 flex flex-col items-center shadow-2xl relative">
+            <div class="absolute -top-3 bg-emerald-600 text-slate-950 font-black text-[11px] px-3 py-0.5 rounded-full border border-emerald-300 uppercase">
+                선택된 수호자
+            </div>
+
+            <div class="flex justify-between items-center w-full my-2">
+                <button id="btn-prev-char" class="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 flex items-center justify-center transition active:scale-95">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+
+                <div class="flex flex-col items-center">
+                    <div id="lobby-char-emoji" class="text-7xl my-2 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] animate-pulse-soft">
+                        🐱
+                    </div>
+                    <h3 id="lobby-char-name" class="text-xl font-black text-amber-300">에코 냥코 대원</h3>
+                    <p id="lobby-char-desc" class="text-xs text-slate-300 mt-0.5 line-clamp-1">계단을 오르며 오염을 정화하는 기본 대원</p>
+                </div>
+
+                <button id="btn-next-char" class="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 flex items-center justify-center transition active:scale-95">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <button id="btn-unlock-char" class="w-full mt-2 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md transition active:scale-95 hidden">
+                <i class="fa-solid fa-lock mr-1"></i> 해금하기 (<span id="unlock-cost">500</span> 🍃)
+            </button>
+        </div>
+
+        <!-- MAIN ACTION BUTTONS -->
+        <div class="w-full flex flex-col gap-3 mb-6">
+            <button id="btn-start-game" class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-black text-2xl rounded-2xl border-2 border-emerald-300 btn-green-glow btn-active-scale shadow-2xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play text-amber-300"></i> 시작하기
+            </button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-open-shop" class="py-3 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-store text-amber-400"></i> 상점 & 캐릭터
+                </button>
+                <button id="btn-open-guide" class="py-3 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-book-open text-cyan-400"></i> 조작 안내
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOUCH CONTROLS OVERLAY (DURING GAMEPLAY) -->
+    <div id="game-controls" class="relative z-20 w-full max-w-lg px-4 mb-8 grid grid-cols-2 gap-4 hidden">
+        <button id="btn-action-turn" class="py-6 bg-gradient-to-b from-cyan-600 to-blue-700 active:from-cyan-500 active:to-blue-600 text-white rounded-3xl border-2 border-cyan-300 btn-active-scale shadow-2xl flex flex-col items-center justify-center gap-1 select-none">
+            <i class="fa-solid fa-arrows-rotate text-3xl text-cyan-200"></i>
+            <span class="text-lg font-black tracking-wider">방향 전환</span>
+            <span class="text-[10px] text-cyan-200 font-normal">키보드 [Z] / [←]</span>
+        </button>
+
+        <button id="btn-action-climb" class="py-6 bg-gradient-to-b from-emerald-500 to-green-700 active:from-emerald-400 active:to-green-600 text-white rounded-3xl border-2 border-emerald-300 btn-active-scale shadow-2xl flex flex-col items-center justify-center gap-1 select-none">
+            <i class="fa-solid fa-shoe-prints text-3xl text-amber-300"></i>
+            <span class="text-lg font-black tracking-wider">오르기</span>
+            <span class="text-[10px] text-emerald-200 font-normal">키보드 [X] / [→] / [Space]</span>
+        </button>
+    </div>
+
+    <!-- GAME OVER / RESULT MODAL -->
+    <div id="modal-result" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-emerald-500/50 rounded-3xl p-6 max-w-sm w-full text-center flex flex-col items-center shadow-2xl">
+            <div id="result-icon" class="text-6xl mb-2">🌿</div>
+            <h2 class="text-3xl font-black text-amber-300 mb-1">정화 완료!</h2>
+            <p class="text-xs text-slate-300 mb-4">지구의 친환경 계단을 높이 올랐습니다.</p>
+
+            <div class="w-full bg-slate-900/80 p-4 rounded-2xl border border-slate-700 flex flex-col gap-2 mb-5">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">최종 점수</span>
+                    <span id="res-final-score" class="text-2xl font-black text-emerald-300">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-t border-slate-800 pt-2">
+                    <span class="text-slate-400">획득 에코 잎사귀</span>
+                    <span id="res-earned-coins" class="text-base font-black text-amber-400">+0 🍃</span>
+                </div>
+            </div>
+
+            <div class="w-full flex flex-col gap-2.5">
+                <button id="btn-restart-game" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-lg rounded-2xl border border-emerald-300 shadow-lg btn-active-scale">
+                    다시 도전
+                </button>
+                <button id="btn-return-lobby" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm rounded-xl border border-slate-700 transition">
+                    메인 메뉴로
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ECO QUIZ MODAL (RECOVERY BONUS) -->
+    <div id="modal-quiz" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-emerald-500/50 rounded-3xl p-6 max-w-md w-full flex flex-col shadow-2xl">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest mb-1">
+                <i class="fa-solid fa-graduation-cap"></i> ECO RECOVERY QUIZ
+            </div>
+            <h3 class="text-2xl font-black text-amber-300 mb-3 flex items-center gap-2">
+                🌱 부활 찬스 에코 퀴즈
+            </h3>
+
+            <p id="quiz-question-text" class="text-sm md:text-base font-bold text-slate-100 bg-slate-900/90 p-4 rounded-2xl border border-slate-700 mb-4 leading-relaxed">
+                질문 내용이 여기에 들어갑니다.
+            </p>
+
+            <div id="quiz-options-container" class="space-y-2 mb-4"></div>
+
+            <div id="quiz-result-box" class="p-3 rounded-2xl bg-slate-900/90 border border-slate-700 hidden text-xs font-bold">
+                <div id="quiz-result-title" class="text-sm font-black mb-1"></div>
+                <div id="quiz-result-desc" class="text-slate-300 leading-relaxed"></div>
+            </div>
+
+            <button id="btn-quiz-continue" class="w-full py-3 mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black rounded-xl shadow-lg hidden">
+                계속하기
+            </button>
+        </div>
+    </div>
+
+    <!-- GUIDE MODAL -->
+    <div id="modal-guide" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-emerald-500/40 rounded-3xl p-6 max-w-sm w-full flex flex-col text-slate-200">
+            <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+                <h3 class="text-lg font-black text-emerald-300"><i class="fa-solid fa-circle-info mr-1"></i> 조작법 안내</h3>
+                <button class="btn-close-modal text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="space-y-3 text-xs leading-relaxed">
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700">
+                    <span class="font-bold text-amber-300 block mb-1">🎮 PC 키보드 조작</span>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><b class="text-cyan-300">방향 전환:</b> [Z] 키 또는 [왼쪽 화살표 ←]</li>
+                        <li><b class="text-emerald-300">계단 오르기:</b> [X] 키 또는 [오른쪽 화살표 →] / [스페이스바]</li>
+                    </ul>
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700">
+                    <span class="font-bold text-amber-300 block mb-1">📱 모바일 터치 조작</span>
+                    <p class="text-slate-300">하단의 <b class="text-cyan-300">[방향 전환]</b> 및 <b class="text-emerald-300">[오르기]</b> 버튼을 터치하여 계단을 빠르게 오릅니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME LOGIC -->
+    <script>
+        /* SOUND FX SYNTHESIZER */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, duration, type = 'sine', gainVal = 0.08) {
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            playStep() {
+                this.playTone(320 + Math.random() * 60, 0.05, 'triangle', 0.06);
+            }
+            playTurn() {
+                this.playTone(520, 0.08, 'sine', 0.08);
+            }
+            playCoin() {
+                this.playTone(880, 0.12, 'sine', 0.1);
+            }
+            playFail() {
+                this.playTone(180, 0.3, 'sawtooth', 0.12);
+            }
+        }
+        const sfx = new SoundFX();
+
+        /* PLAYER & CHARACTERS STATE */
+        const CHARACTERS_DB = [
+            { id: 'cat', name: '에코 냥코', emoji: '🐱', cost: 0, unlocked: true, desc: '기본 친환경 대원 냥코' },
+            { id: 'tree', name: '새싹 나무 정령', emoji: '🌳', cost: 150, unlocked: false, desc: '계단마다 푸른 숲을 가꾸는 정령' },
+            { id: 'robot', name: '분리수거 메카', emoji: '🤖', cost: 300, unlocked: false, desc: '플라스틱 오염을 빠르게 압축하는 로봇' },
+            { id: 'solar', name: '태양광 솔라맨', emoji: '☀️', cost: 500, unlocked: false, desc: '청정 빛 에너지를 뿜어내는 수호자' },
+            { id: 'rider', name: '친환경 라이더', emoji: '🚴', cost: 800, unlocked: false, desc: '탄소 배출 0% 무한 페달 라이더' },
+            { id: 'whale', name: '해양 수호 고래', emoji: '🐋', cost: 1000, unlocked: false, desc: '바다의 미세플라스틱을 정화하는 수호자' },
+            { id: 'wind', name: '풍력 윈드 히어로', emoji: '⚡', cost: 1200, unlocked: false, desc: '깨끗한 바람으로 전력을 생산하는 에이전트' },
+            { id: 'bee', name: '생태계 꿀벌 대원', emoji: '🐝', cost: 1500, unlocked: false, desc: '자연 생태계 수분 작용을 돕는 꿀벌' },
+            { id: 'gaia', name: '성수 가이아', emoji: '🔱', cost: 2000, unlocked: false, desc: '지구 대자연의 전설적인 에이전트' },
+            { id: 'earthcat', name: '지구 수호 냥코', emoji: '🌍', cost: 3000, unlocked: false, desc: '우주에서 온 지구 보호 최고 존엄 냥코' }
+        ];
+
+        const playerState = {
+            coins: 100,
+            highScore: 0,
+            selectedCharIndex: 0,
+            unlockedChars: ['cat']
+        };
+
+        const ECO_QUIZZES = [
+            {
+                question: "올바른 투명 페트병 분리배출 방법은?",
+                options: ["내용물을 비우고 라벨을 떼서 압축 후 뚜껑을 닫아 배출", "라벨을 붙인 채로 찌그러뜨려 배출", "종량제 봉투에 다른 쓰레기와 함께 배출", "그냥 바다에 던진다"],
+                answer: 0,
+                desc: "투명 페트병은 내용물을 비우고 라벨을 제거한 뒤 압축해 배출해야 고품질 재활용 원료가 됩니다."
+            },
+            {
+                question: "지구 온난화의 주원인인 온실가스를 줄이기 위한 생활 속 실천은?",
+                options: ["가까운 거리는 걸어가거나 자전거 이용하기", "하루 종일 에어컨 최고 세기로 틀기", "일회용 용기 적극 사용하기", "전등 계속 켜놓기"],
+                answer: 0,
+                desc: "대중교통 및 자전거 이용은 탄소 배출량을 직관적으로 감축시켜 지구를 보호합니다."
+            },
+            {
+                question: "분해되기까지 약 500년 이상 소요되는 오염 물질은?",
+                options: ["나뭇잎", "플라스틱 및 비닐류", "사과 껍질", "종이 조각"],
+                answer: 1,
+                desc: "플라스틱은 분해에 500년 이상 걸리므로 다회용품 및 텀블러 사용이 매우 중요합니다."
+            }
+        ];
+
+        /* STAIRS ENGINE & CANVAS */
+        class EcoStairsGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isPlaying = false;
+                this.hasUsedQuizRevive = false; // 한 라운드당 퀴즈 부활 1회 제한 플래그
+                
+                // Game Mechanics variables
+                this.stairs = []; // Array of stair objects {x, y, dir: -1(left) or 1(right), hasCoin: bool}
+                this.characterX = 0;
+                this.characterY = 0;
+                this.characterDir = 1; // 1: facing right, -1: facing left
+                this.currentStairIndex = 0;
+                this.score = 0;
+                this.combo = 0;
+                this.energy = 100;
+                this.maxEnergy = 100;
+                this.energyDecayRate = 12; // Energy drops faster as score increases
+                
+                // Visual Dimensions
+                this.stairWidth = 60;
+                this.stairHeight = 32;
+                
+                this.cameraX = 0;
+                this.targetCameraX = 0;
+                this.cameraY = 0;
+                this.targetCameraY = 0;
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            initGame() {
+                ecoReported = false;
+                this.stairs = [];
+                this.score = 0;
+                this.combo = 0;
+                this.energy = 100;
+                this.currentStairIndex = 0;
+                this.characterDir = 1;
+                this.hasUsedQuizRevive = false; // 새로운 게임 시작 시 퀴즈 사용 가능 상태로 리셋
+
+                // Generate initial stair set
+                let startX = 0;
+                let startY = 0;
+                let currentDir = 1;
+
+                this.stairs.push({ x: startX, y: startY, dir: currentDir, type: 'start' });
+
+                for (let i = 0; i < 150; i++) {
+                    // Randomly change direction with probability
+                    if (Math.random() < 0.45 && i > 1) {
+                        currentDir *= -1;
+                    }
+                    const prev = this.stairs[this.stairs.length - 1];
+                    const nextX = prev.x + (currentDir === 1 ? this.stairWidth : -this.stairWidth);
+                    const nextY = prev.y - this.stairHeight;
+                    const hasCoin = Math.random() < 0.25 && i > 3;
+
+                    this.stairs.push({
+                        x: nextX,
+                        y: nextY,
+                        dir: currentDir,
+                        hasCoin: hasCoin,
+                        cleared: false
+                    });
+                }
+
+                this.characterX = this.stairs[0].x;
+                this.characterY = this.stairs[0].y;
+                
+                // 화면 중앙 기준 카메라 초기 설정
+                this.cameraX = this.canvas.width / 2 - this.stairs[0].x;
+                this.targetCameraX = this.cameraX;
+                this.cameraY = (this.canvas.height - 220) - this.stairs[0].y;
+                this.targetCameraY = this.cameraY;
+
+                this.isPlaying = true;
+                this.lastTime = performance.now();
+                
+                document.getElementById('energy-bar-container').classList.remove('hidden');
+                document.getElementById('game-controls').classList.remove('hidden');
+                document.getElementById('view-lobby').classList.add('hidden');
+                
+                this.updateHUD();
+                requestAnimationFrame(() => this.loop());
+            }
+
+            generateMoreStairs() {
+                let currentDir = this.stairs[this.stairs.length - 1].dir;
+                for (let i = 0; i < 50; i++) {
+                    if (Math.random() < 0.45) {
+                        currentDir *= -1;
+                    }
+                    const prev = this.stairs[this.stairs.length - 1];
+                    const nextX = prev.x + (currentDir === 1 ? this.stairWidth : -this.stairWidth);
+                    const nextY = prev.y - this.stairHeight;
+                    const hasCoin = Math.random() < 0.25;
+
+                    this.stairs.push({
+                        x: nextX,
+                        y: nextY,
+                        dir: currentDir,
+                        hasCoin: hasCoin,
+                        cleared: false
+                    });
+                }
+            }
+
+            // Player action: Climb forward in current facing direction
+            climb() {
+                if (!this.isPlaying) return;
+
+                const nextIndex = this.currentStairIndex + 1;
+                // 남은 계단 수가 30개 이하가 되면 무한히 계속 추가 생성
+                if (this.stairs.length - nextIndex < 30) {
+                    this.generateMoreStairs();
+                }
+
+                const targetStair = this.stairs[nextIndex];
+                const requiredDir = (targetStair.x > this.stairs[this.currentStairIndex].x) ? 1 : -1;
+
+                // Check if player facing direction matches target stair direction
+                if (this.characterDir === requiredDir) {
+                    // SUCCESS STEP
+                    this.currentStairIndex = nextIndex;
+                    this.score++;
+                    this.combo++;
+                    this.energy = Math.min(this.maxEnergy, this.energy + 8); // Recovery energy
+
+                    if (targetStair.hasCoin) {
+                        targetStair.hasCoin = false;
+                        playerState.coins += 2;
+                        sfx.playCoin();
+                    } else {
+                        sfx.playStep();
+                    }
+
+                    // 계단이 화면 중앙에 오도록 cameraX 및 cameraY 계산
+                    this.targetCameraX = (this.canvas.width / 2) - targetStair.x;
+                    this.targetCameraY = (this.canvas.height - 220) - targetStair.y;
+
+                    // Trigger combo popup
+                    if (this.combo >= 5) {
+                        const comboEl = document.getElementById('hud-combo');
+                        comboEl.textContent = `${this.combo} COMBO!`;
+                        comboEl.style.opacity = '1';
+                        setTimeout(() => comboEl.style.opacity = '0', 600);
+                    }
+
+                    this.updateHUD();
+                } else {
+                    // FAIL: WRONG DIRECTION
+                    this.gameOver("방향을 잘못 조작했습니다!");
+                }
+            }
+
+            // Player action: Turn direction
+            turn() {
+                if (!this.isPlaying) return;
+                this.characterDir *= -1;
+                sfx.playTurn();
+
+                // 방향 전환 시에도 계단을 오르도록 climb() 호출
+                this.climbAfterTurn();
+            }
+
+            // 방향 전환 후 계단 오르기 검증
+            climbAfterTurn() {
+                const nextIndex = this.currentStairIndex + 1;
+                // 남은 계단 수가 30개 이하가 되면 무한히 계속 추가 생성
+                if (this.stairs.length - nextIndex < 30) {
+                    this.generateMoreStairs();
+                }
+
+                const targetStair = this.stairs[nextIndex];
+                const requiredDir = (targetStair.x > this.stairs[this.currentStairIndex].x) ? 1 : -1;
+
+                if (this.characterDir === requiredDir) {
+                    this.currentStairIndex = nextIndex;
+                    this.score++;
+                    this.combo++;
+                    this.energy = Math.min(this.maxEnergy, this.energy + 8);
+
+                    if (targetStair.hasCoin) {
+                        targetStair.hasCoin = false;
+                        playerState.coins += 2;
+                        sfx.playCoin();
+                    }
+
+                    // 계단 중앙 고정 카메라 설정
+                    this.targetCameraX = (this.canvas.width / 2) - targetStair.x;
+                    this.targetCameraY = (this.canvas.height - 220) - targetStair.y;
+
+                    if (this.combo >= 5) {
+                        const comboEl = document.getElementById('hud-combo');
+                        comboEl.textContent = `${this.combo} COMBO!`;
+                        comboEl.style.opacity = '1';
+                        setTimeout(() => comboEl.style.opacity = '0', 600);
+                    }
+
+                    this.updateHUD();
+                } else {
+                    this.gameOver("방향을 잘못 조작했습니다!");
+                }
+            }
+
+            gameOver(reason) {
+                this.isPlaying = false;
+                sfx.playFail();
+
+                if (this.score > playerState.highScore) {
+                    playerState.highScore = this.score;
+                }
+                saveUserData();
+
+                // 퀴즈를 아직 사용하지 않았다면 1회 퀴즈 부활 찬스 제공, 이미 사용했으면 즉시 결과 창 출력
+                if (!this.hasUsedQuizRevive) {
+                    this.hasUsedQuizRevive = true; // 퀴즈 기회 소진
+                    showEcoQuiz(reason);
+                } else {
+                    showResultModal();
+                }
+            }
+
+            updateHUD() {
+                document.getElementById('hud-score').textContent = this.score;
+                document.getElementById('hud-coins').textContent = playerState.coins;
+                document.getElementById('hud-highscore').textContent = `BEST ${playerState.highScore}`;
+            }
+
+            loop() {
+                if (!this.isPlaying) return;
+
+                const now = performance.now();
+                const dt = (now - this.lastTime) / 1000;
+                this.lastTime = now;
+
+                // 에너지 감소 (점수가 높아질수록 빨라짐)
+                const currentDecay = this.energyDecayRate + Math.min(25, this.score * 0.15);
+                this.energy -= currentDecay * dt;
+
+                const energyFill = document.getElementById('energy-bar-fill');
+                const energyPercent = Math.max(0, (this.energy / this.maxEnergy) * 100);
+                energyFill.style.width = `${energyPercent}%`;
+
+                if (this.energy <= 0) {
+                    this.gameOver("시간이 초과되었습니다!");
+                    return;
+                }
+
+                // 카메라 부드러운 중앙 추종 (X, Y)
+                this.cameraX += (this.targetCameraX - this.cameraX) * 0.18;
+                this.cameraY += (this.targetCameraY - this.cameraY) * 0.18;
+
+                this.render();
+                requestAnimationFrame(() => this.loop());
+            }
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 메인 화면(로비)일 때는 계단과 플레이어를 렌더링하지 않고 화면을 깔끔하게 유지
+                if (!this.isPlaying) return;
+
+                // 배경 그라데이션 (지구 자연 정화 컨셉)
+                const bgGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                bgGradient.addColorStop(0, '#062012');
+                bgGradient.addColorStop(0.5, '#0a2e1b');
+                bgGradient.addColorStop(1, '#03140a');
+                this.ctx.fillStyle = bgGradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.translate(this.cameraX, this.cameraY);
+
+                // 계단 그리기
+                const activeStair = this.stairs[this.currentStairIndex];
+                for (let i = 0; i < this.stairs.length; i++) {
+                    const stair = this.stairs[i];
+
+                    // 화면 범위를 벗어난 계단은 렌더링 생략
+                    const screenY = stair.y + this.cameraY;
+                    if (screenY < -100 || screenY > this.canvas.height + 100) continue;
+
+                    const isPassed = i < this.currentStairIndex;
+                    const isCurrent = i === this.currentStairIndex;
+
+                    // 계단 타일
+                    this.ctx.fillStyle = isPassed ? '#15803d' : (isCurrent ? '#22c55e' : '#166534');
+                    this.ctx.strokeStyle = '#4ade80';
+                    this.ctx.lineWidth = 2;
+
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(
+                        stair.x - this.stairWidth / 2,
+                        stair.y,
+                        this.stairWidth,
+                        this.stairHeight,
+                        6
+                    );
+                    this.ctx.fill();
+                    this.ctx.stroke();
+
+                    // 계단 위 에코 잎사귀 코인
+                    if (stair.hasCoin) {
+                        this.ctx.font = '16px sans-serif';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText('🍃', stair.x, stair.y - 8);
+                    }
+                }
+
+                // 플레이어 캐릭터 그리기
+                if (activeStair) {
+                    const curChar = CHARACTERS_DB[playerState.selectedCharIndex];
+                    this.ctx.save();
+                    this.ctx.translate(activeStair.x, activeStair.y - 12);
+
+                    // 좌우 반전
+                    if (this.characterDir === -1) {
+                        this.ctx.scale(-1, 1);
+                    }
+
+                    this.ctx.font = '36px sans-serif';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(curChar.emoji, 0, 0);
+
+                    this.ctx.restore();
+                }
+
+                this.ctx.restore();
+            }
+        }
+
+        const game = new EcoStairsGame();
+
+        /* USER DATA MANAGEMENT */
+        function loadUserData() {
+            try {
+                const data = JSON.parse(localStorage.getItem('eco_stairs_data'));
+                if (data) {
+                    playerState.coins = data.coins || 0;
+                    playerState.highScore = data.highScore || 0;
+                    playerState.unlockedChars = data.unlockedChars || ['cat'];
+                    playerState.selectedCharIndex = data.selectedCharIndex || 0;
+
+                    // 캐릭터 해금 상태 반영
+                    CHARACTERS_DB.forEach(char => {
+                        char.unlocked = playerState.unlockedChars.includes(char.id);
+                    });
+                }
+            } catch(e) {}
+            updateLobbyUI();
+        }
+
+        function saveUserData() {
+            try {
+                localStorage.setItem('eco_stairs_data', JSON.stringify({
+                    coins: playerState.coins,
+                    highScore: playerState.highScore,
+                    unlockedChars: playerState.unlockedChars,
+                    selectedCharIndex: playerState.selectedCharIndex
+                }));
+            } catch(e) {}
+        }
+
+        /* LOBBY & UI CONTROLLER */
+        function updateLobbyUI() {
+            document.getElementById('hud-coins').textContent = playerState.coins;
+            document.getElementById('hud-highscore').textContent = `BEST ${playerState.highScore}`;
+
+            const char = CHARACTERS_DB[playerState.selectedCharIndex];
+            document.getElementById('lobby-char-emoji').textContent = char.emoji;
+            document.getElementById('lobby-char-name').textContent = char.name;
+            document.getElementById('lobby-char-desc').textContent = char.desc;
+
+            const unlockBtn = document.getElementById('btn-unlock-char');
+            const costSpan = document.getElementById('unlock-cost');
+
+            if (!char.unlocked) {
+                unlockBtn.classList.remove('hidden');
+                costSpan.textContent = char.cost;
+            } else {
+                unlockBtn.classList.add('hidden');
+            }
+        }
+
+        /* ECO QUIZ SYSTEM */
+        let currentQuiz = null;
+
+        function showEcoQuiz(failReason = "") {
+            currentQuiz = ECO_QUIZZES[Math.floor(Math.random() * ECO_QUIZZES.length)];
+
+            document.getElementById('quiz-question-text').textContent = currentQuiz.question;
+            const container = document.getElementById('quiz-options-container');
+            container.innerHTML = '';
+
+            document.getElementById('quiz-result-box').classList.add('hidden');
+            document.getElementById('btn-quiz-continue').classList.add('hidden');
+
+            currentQuiz.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-left text-sm font-bold text-slate-200 rounded-xl border border-slate-700 transition active:scale-98 flex items-center justify-between";
+                btn.innerHTML = `<span>${idx + 1}. ${optText}</span> <i class="fa-solid fa-chevron-right text-xs opacity-40"></i>`;
+                btn.onclick = () => selectQuizAnswer(idx);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('modal-quiz').classList.remove('hidden');
+        }
+
+        function selectQuizAnswer(selectedIdx) {
+            const isCorrect = selectedIdx === currentQuiz.answer;
+            const resBox = document.getElementById('quiz-result-box');
+            const resTitle = document.getElementById('quiz-result-title');
+            const resDesc = document.getElementById('quiz-result-desc');
+            const continueBtn = document.getElementById('btn-quiz-continue');
+
+            resBox.classList.remove('hidden');
+
+            if (isCorrect) {
+                resBox.className = "p-3 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-bold";
+                resTitle.textContent = "🎉 정답입니다! (부활 에너지 100% 완전 회복)";
+                resDesc.textContent = currentQuiz.desc;
+
+                continueBtn.textContent = "이어서 계속 오르기";
+                continueBtn.onclick = () => {
+                    document.getElementById('modal-quiz').classList.add('hidden');
+                    game.energy = game.maxEnergy; // 게이지바를 100% 꽉 채움
+                    game.isPlaying = true;
+                    requestAnimationFrame(() => game.loop());
+                };
+            } else {
+                resBox.className = "p-3 rounded-2xl bg-rose-950/90 border border-rose-500/50 text-rose-300 text-xs font-bold";
+                resTitle.textContent = "❌ 아쉽게도 오답입니다.";
+                resDesc.textContent = `정답: ${currentQuiz.options[currentQuiz.answer]}\n${currentQuiz.desc}`;
+
+                continueBtn.textContent = "결과 확인하기";
+                continueBtn.onclick = () => {
+                    document.getElementById('modal-quiz').classList.add('hidden');
+                    showResultModal();
+                };
+            }
+
+            continueBtn.classList.remove('hidden');
+        }
+
+        var ecoReported = false;
+        function showResultModal() {
+            if (!ecoReported && window.GallerySDK) { ecoReported = true; GallerySDK.reportScore('2026-env-eco-stairs', game.score); }
+            document.getElementById('res-final-score').textContent = game.score;
+            document.getElementById('res-earned-coins').textContent = `+${game.score} 🍃`;
+
+            playerState.coins += game.score;
+            saveUserData();
+            updateLobbyUI();
+
+            document.getElementById('modal-result').classList.remove('hidden');
+        }
+
+        /* EVENT LISTENERS */
+        window.onload = () => {
+            loadUserData();
+
+            // LOBBY CONTROL
+            document.getElementById('btn-start-game').onclick = () => {
+                game.initGame();
+            };
+
+            document.getElementById('btn-prev-char').onclick = () => {
+                playerState.selectedCharIndex = (playerState.selectedCharIndex - 1 + CHARACTERS_DB.length) % CHARACTERS_DB.length;
+                updateLobbyUI();
+            };
+
+            document.getElementById('btn-next-char').onclick = () => {
+                playerState.selectedCharIndex = (playerState.selectedCharIndex + 1) % CHARACTERS_DB.length;
+                updateLobbyUI();
+            };
+
+            document.getElementById('btn-unlock-char').onclick = () => {
+                const char = CHARACTERS_DB[playerState.selectedCharIndex];
+                if (playerState.coins >= char.cost) {
+                    playerState.coins -= char.cost;
+                    char.unlocked = true;
+                    playerState.unlockedChars.push(char.id);
+                    saveUserData();
+                    updateLobbyUI();
+                } else {
+                    alert("🍃 에코 잎사귀가 부족합니다!");
+                }
+            };
+
+            // GAME IN-GAME CONTROLS
+            const turnAction = () => game.turn();
+            const climbAction = () => game.climb();
+
+            document.getElementById('btn-action-turn').addEventListener('click', turnAction);
+            document.getElementById('btn-action-climb').addEventListener('click', climbAction);
+
+            // KEYBOARD CONTROLS
+            window.addEventListener('keydown', (e) => {
+                if (!game.isPlaying) return;
+                if (e.key === 'z' || e.key === 'Z' || e.key === 'ArrowLeft') {
+                    turnAction();
+                } else if (e.key === 'x' || e.key === 'X' || e.key === 'ArrowRight' || e.code === 'Space') {
+                    climbAction();
+                }
+            });
+
+            // RESULT MODAL
+            document.getElementById('btn-restart-game').onclick = () => {
+                document.getElementById('modal-result').classList.add('hidden');
+                game.initGame();
+            };
+
+            document.getElementById('btn-return-lobby').onclick = () => {
+                document.getElementById('modal-result').classList.add('hidden');
+                document.getElementById('energy-bar-container').classList.add('hidden');
+                document.getElementById('game-controls').classList.add('hidden');
+                document.getElementById('view-lobby').classList.remove('hidden');
+                
+                // 메인 화면으로 복귀 시 캔버스 내용 비우기
+                game.render();
+            };
+
+            // GUIDE MODAL
+            document.getElementById('btn-open-guide').onclick = () => {
+                document.getElementById('modal-guide').classList.remove('hidden');
+            };
+            document.querySelectorAll('.btn-close-modal').forEach(btn => {
+                btn.onclick = () => {
+                    document.getElementById('modal-guide').classList.add('hidden');
+                };
+            });
+        };
+    </script>
+</body>
+</html>

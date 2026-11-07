@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미세미세한 맛 플라수프: 3챕터 대탈출</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pixel Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Galmuri11:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d0d1a;
+            color: #ffffff;
+            font-family: 'Galmuri11', 'Press Start 2P', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .pixel-corners {
+            clip-path: polygon(
+                0 8px, 8px 8px, 8px 0,
+                calc(100% - 8px) 0, calc(100% - 8px) 8px, 100% 8px,
+                100% calc(100% - 8px), calc(100% - 8px) calc(100% - 8px), calc(100% - 8px) 100%,
+                8px 100%, 8px calc(100% - 8px), 0 calc(100% - 8px)
+            );
+        }
+
+        .pixel-box {
+            background-color: #1a1a2e;
+            border: 4px solid #f6d62a;
+            box-shadow: 0 8px 0 #0f0f1b;
+        }
+
+        .pixel-btn {
+            background-color: #ff3366;
+            border-bottom: 4px solid #b3003b;
+            border-right: 4px solid #b3003b;
+            border-top: 4px solid #ff6699;
+            border-left: 4px solid #ff6699;
+            transition: transform 0.1s;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+            border-right-width: 2px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background-color: #111;
+        }
+            /* 키보드·마우스 환경에서는 화면 버튼 숨김 (태블릿은 화면이 커도 버튼 표시) */
+        @media (hover: hover) and (pointer: fine) { #touchBar { display: none; } }
+    </style>
+<script src="/gallery-sdk.js"></script>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <div class="w-full max-w-4xl flex flex-col items-center">
+        
+        <!-- 헤더 -->
+        <header class="text-center mb-3">
+            <h1 class="text-xl sm:text-3xl font-bold text-amber-400 tracking-wider mb-1" style="text-shadow: 2px 2px #000;">
+                🧩 미세미세한 맛 플라수프
+            </h1>
+            <p id="chapterSubTitle" class="text-xs sm:text-sm text-pink-400">챕터 1: 레고 방의 점프 대탈출</p>
+        </header>
+
+        <!-- 인트로 화면 -->
+        <div id="introScreen" class="w-full pixel-box pixel-corners p-4 sm:p-6 mb-4 max-w-2xl text-center">
+            <div class="bg-black/40 p-4 rounded-lg mb-6 text-left text-xs sm:text-sm leading-relaxed text-gray-200 border border-amber-500/30">
+                <p class="mb-3 text-amber-300 font-bold">📖 [프롤로그 - 아이의 방 바닥]</p>
+                <p class="mb-2">알록달록한 레고 브릭들이 쌓인 방 바닥, 이곳은 나의 보금자리였다.</p>
+                <p class="mb-2">하지만 오늘 밤, 청소 시간에 밀려 쓰레기통에 던져질 위기에 처했다!</p>
+                <p class="mb-3 italic text-pink-300">“엄마, 방에 있는 오래된 블록들 다 치울래요!”</p>
+                <p class="text-amber-200">이대로 미세플라스틱이 되어 버려질 순 없다! 장애물을 넘어 닫힌 방문을 열고 복도로 탈출하자!</p>
+            </div>
+            
+            <div class="mb-6 text-left bg-slate-900/60 p-3 rounded text-xs text-amber-100">
+                <p class="font-bold mb-1 text-pink-400">🎮 조작 방법:</p>
+                <p>• 이동: <span class="bg-slate-700 px-1 py-0.5 rounded text-white">←</span> <span class="bg-slate-700 px-1 py-0.5 rounded text-white">→</span> 또는 <span class="bg-slate-700 px-1 py-0.5 rounded text-white">A</span> <span class="bg-slate-700 px-1 py-0.5 rounded text-white">D</span></p>
+                <p>• 점프: <span class="bg-slate-700 px-1 py-0.5 rounded text-white">Space</span> / <span class="bg-slate-700 px-1 py-0.5 rounded text-white">↑</span> / <span class="bg-slate-700 px-1 py-0.5 rounded text-white">W</span></p>
+            </div>
+
+            <button onclick="startChapter1()" class="pixel-btn px-6 py-3 text-sm sm:text-base text-white font-bold cursor-pointer hover:brightness-110">
+                🚀 챕터 1 시작하기!
+            </button>
+        </div>
+
+        <!-- 챕터 2 전환 모달 -->
+        <div id="intermissionScreen" class="hidden w-full pixel-box pixel-corners p-4 sm:p-6 mb-4 max-w-2xl text-center">
+            <h2 class="text-2xl font-bold text-emerald-400 mb-3">🚪 방 탈출 성공!</h2>
+            <div class="bg-black/40 p-4 rounded-lg mb-6 text-left text-xs sm:text-sm leading-relaxed text-gray-200 border border-emerald-500/30">
+                <p class="mb-3 text-amber-300 font-bold">📖 [챕터 2 프롤로그 - 어두운 복도]</p>
+                <p class="mb-2">방문을 열고 무사히 복도로 나왔다! 이제 복도를 질주할 차례!</p>
+                <p class="mb-2 text-red-400 font-bold">하지만 그때... 방 안에서 비교도 안 될 거대한 괴물 같은 그림자가 나타났다!</p>
+                <p class="mb-3 italic text-yellow-300">"콰광! 왈왈!! 멍멍!!"</p>
+                <p class="text-amber-200">집에서 키우는 거대한 강아지 '장군이'가 이빨을 드러내며 쫓아온다! 장애물을 넘어 계단 입구로 도망치자!</p>
+            </div>
+
+            <button onclick="startChapter2()" class="pixel-btn px-6 py-3 text-sm sm:text-base text-white font-bold cursor-pointer hover:brightness-110">
+                🐕 챕터 2: 거대 강아지 추격전!
+            </button>
+        </div>
+
+        <!-- 챕터 3 전환 모달 -->
+        <div id="intermission3Screen" class="hidden w-full pixel-box pixel-corners p-4 sm:p-6 mb-4 max-w-2xl text-center">
+            <h2 class="text-2xl font-bold text-amber-400 mb-3">🏃‍♂️ 복도 탈출 성공!</h2>
+            <div class="bg-black/40 p-4 rounded-lg mb-6 text-left text-xs sm:text-sm leading-relaxed text-gray-200 border border-amber-500/30">
+                <p class="mb-3 text-amber-300 font-bold">📖 [챕터 3 프롤로그 - 위험 천만 계단실]</p>
+                <p class="mb-2">간발의 차로 거대 강아지를 따돌리고 계단 문을 열었다!</p>
+                <p class="mb-2 text-pink-400 font-bold">하지만 위쪽에서 아이가 떨어뜨린 레고 통에서 거대한 레고 공들과 브릭들이 계단을 따라 데굴데굴 굴러 떨어진다!</p>
+                <p class="text-amber-200">위에서 굴러 내려오는 레고 폭풍을 점프로 뛰어넘으며 계단 아래 현관으로 무사히 탈출하자!</p>
+            </div>
+
+            <button onclick="startChapter3()" class="pixel-btn px-6 py-3 text-sm sm:text-base text-white font-bold cursor-pointer hover:brightness-110">
+                🧱 챕터 3: 굴러오는 레고 피하기!
+            </button>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="gameContainer" class="hidden relative w-full flex flex-col items-center">
+            
+            <div class="w-full max-w-[800px] flex justify-between items-center mb-2 px-2 text-xs sm:text-sm font-bold bg-slate-800/80 p-2 rounded-t border-t-2 border-amber-400">
+                <div class="text-amber-300"><span id="scoreLabel">플라스틱 조각</span>: <span id="scoreText" class="text-white">0</span> <span id="maxScoreSpan">/ <span id="maxScoreText">0</span></span></div>
+                <div class="text-pink-400"><span id="goalLabel">목표: 방문을 향해 이동</span></div>
+            </div>
+
+            <div class="relative w-full max-w-[800px] aspect-[16/9] bg-black border-4 border-amber-400 rounded-b shadow-2xl overflow-hidden">
+                <canvas id="gameCanvas" width="800" height="450" class="w-full h-full block"></canvas>
+
+                <!-- 게임 오버 / 승리 오버레이 -->
+                <div id="overlayModal" class="hidden absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center z-10">
+                    <h2 id="modalTitle" class="text-2xl sm:text-3xl font-bold mb-3 text-red-500">게임 오버!</h2>
+                    <p id="modalDesc" class="text-xs sm:text-sm text-gray-300 mb-6 max-w-md">장난감 상자에 다시 갇히고 말았습니다...</p>
+                    <button id="restartBtn" onclick="restartCurrentChapter()" class="pixel-btn px-6 py-3 text-xs sm:text-sm text-white font-bold cursor-pointer hover:brightness-110">
+                        🔄 다시 시도하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 터치 버튼 -->
+            <div id="touchBar" class="flex justify-between w-full max-w-[800px] mt-3 px-2 gap-2">
+                <div class="flex gap-2">
+                    <button id="btnLeft" class="pixel-btn w-14 h-12 text-lg text-white font-bold">←</button>
+                    <button id="btnRight" class="pixel-btn w-14 h-12 text-lg text-white font-bold">→</button>
+                </div>
+                <button id="btnJump" class="pixel-btn w-20 h-12 text-sm text-white font-bold bg-emerald-600 border-emerald-800">점프</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 450;
+        const GRAVITY = 0.45;
+
+        let canvas, ctx;
+        let animationFrameId = null;
+        let currentChapter = 1;
+        let inputInitialized = false;
+
+        const keys = { left: false, right: false, up: false };
+
+        let score = 0;
+        let totalItems = 0;
+        let isGameOver = false;
+        let isVictory = false;
+
+        const camera = { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+
+        const player = {
+            x: 60, y: 300,
+            width: 22, height: 28,
+            vx: 0, vy: 0,
+            speed: 3.8,
+            jumpPower: -9.8,
+            grounded: false,
+            facing: 'right',
+            animFrame: 0, animTimer: 0
+        };
+
+        // 챕터 1 맵 데이터
+        let level1Width = 2800;
+        let platforms = [];
+        let hazards = [];
+        let collectibles = [];
+        let roomDoor = { x: 2680, y: 310, width: 50, height: 80 };
+
+        // 챕터 2 맵 데이터 (거대 강아지)
+        let level2Width = 3200;
+        let dog = { x: -280, y: 190, width: 220, height: 180, speed: 2.8 };
+        let ch2Obstacles = [];
+        let exitFrontDoor = { x: 3050, y: 290, width: 60, height: 100 };
+
+        // 챕터 3 맵 데이터 (계단 및 굴러오는 레고)
+        let level3Width = 3400;
+        let rollingBoulders = [];
+        let boulderTimer = 0;
+        let exitBuildingDoor = { x: 3250, y: 290, width: 65, height: 100 };
+
+        function initCanvas() {
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+            ctx.imageSmoothingEnabled = false;
+
+            if (!inputInitialized) {
+                setupInputListeners();
+                inputInitialized = true;
+            }
+        }
+
+        function stopGameLoop() {
+            if (animationFrameId !== null) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startChapter1() {
+            stopGameLoop();
+            currentChapter = 1;
+            isGameOver = false;
+            isVictory = false;
+            score = 0;
+
+            document.getElementById("chapterSubTitle").textContent = "챕터 1: 레고 방의 점프 대탈출";
+            document.getElementById("introScreen").classList.add("hidden");
+            document.getElementById("intermissionScreen").classList.add("hidden");
+            document.getElementById("intermission3Screen").classList.add("hidden");
+            document.getElementById("gameContainer").classList.remove("hidden");
+            document.getElementById("overlayModal").classList.add("hidden");
+            document.getElementById("maxScoreSpan").classList.remove("hidden");
+            document.getElementById("scoreLabel").textContent = "플라스틱 조각";
+            document.getElementById("goalLabel").textContent = "목표: 방문을 향해 이동";
+
+            initCanvas();
+            setupChapter1Level();
+            resetPlayer(60, 300);
+
+            gameLoop();
+        }
+
+        function startChapter2() {
+            stopGameLoop();
+            currentChapter = 2;
+            isGameOver = false;
+            isVictory = false;
+            score = 0;
+
+            document.getElementById("chapterSubTitle").textContent = "챕터 2: 거대 강아지 추격전!";
+            document.getElementById("introScreen").classList.add("hidden");
+            document.getElementById("intermissionScreen").classList.add("hidden");
+            document.getElementById("intermission3Screen").classList.add("hidden");
+            document.getElementById("gameContainer").classList.remove("hidden");
+            document.getElementById("overlayModal").classList.add("hidden");
+            document.getElementById("maxScoreSpan").classList.add("hidden");
+            document.getElementById("scoreLabel").textContent = "진행 거리";
+            document.getElementById("goalLabel").textContent = "목표: 계단 문을 향해 도망쳐라!";
+
+            initCanvas();
+            setupChapter2Level();
+            resetPlayer(160, 320);
+
+            gameLoop();
+        }
+
+        function startChapter3() {
+            stopGameLoop();
+            currentChapter = 3;
+            isGameOver = false;
+            isVictory = false;
+            score = 0;
+
+            document.getElementById("chapterSubTitle").textContent = "챕터 3: 계단과 굴러오는 레고 폭풍";
+            document.getElementById("introScreen").classList.add("hidden");
+            document.getElementById("intermissionScreen").classList.add("hidden");
+            document.getElementById("intermission3Screen").classList.add("hidden");
+            document.getElementById("gameContainer").classList.remove("hidden");
+            document.getElementById("overlayModal").classList.add("hidden");
+            document.getElementById("maxScoreSpan").classList.add("hidden");
+            document.getElementById("scoreLabel").textContent = "진행 거리";
+            document.getElementById("goalLabel").textContent = "목표: 굴러오는 레고를 피하며 계단 탈출!";
+
+            initCanvas();
+            setupChapter3Level();
+            resetPlayer(100, 300);
+
+            gameLoop();
+        }
+
+        function restartCurrentChapter() {
+            if (currentChapter === 1) startChapter1();
+            else if (currentChapter === 2) startChapter2();
+            else startChapter3();
+        }
+
+        function resetPlayer(startX, startY) {
+            player.x = startX;
+            player.y = startY;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            camera.x = 0;
+        }
+
+        function setupChapter1Level() {
+            platforms = [
+                { x: 0, y: 390, w: 700, h: 60, color: '#2b1d0c' },
+                { x: 780, y: 390, w: 600, h: 60, color: '#2b1d0c' },
+                { x: 1480, y: 390, w: 700, h: 60, color: '#2b1d0c' },
+                { x: 2280, y: 390, w: 520, h: 60, color: '#2b1d0c' },
+
+                { x: 180, y: 320, w: 90, h: 18, color: '#e63946', label: 'LEGO' },
+                { x: 320, y: 260, w: 80, h: 18, color: '#457b9d', label: 'LEGO' },
+                { x: 450, y: 200, w: 100, h: 18, color: '#f4a261', label: 'BOOK' },
+                { x: 600, y: 270, w: 90, h: 18, color: '#2a9d8f', label: 'LEGO' },
+
+                { x: 780, y: 310, w: 120, h: 20, color: '#e76f51' },
+                { x: 950, y: 250, w: 110, h: 20, color: '#2a9d8f' },
+                { x: 1100, y: 190, w: 130, h: 20, color: '#e63946' },
+                { x: 1280, y: 240, w: 90, h: 18, color: '#e9c46a' },
+
+                { x: 1450, y: 320, w: 100, h: 18, color: '#2a9d8f' },
+                { x: 1600, y: 260, w: 90, h: 18, color: '#f4a261' },
+                { x: 1740, y: 200, w: 120, h: 20, color: '#457b9d' },
+                { x: 1900, y: 150, w: 140, h: 20, color: '#e63946' },
+                { x: 2100, y: 220, w: 100, h: 18, color: '#2a9d8f' },
+
+                { x: 2280, y: 280, w: 100, h: 18, color: '#e9c46a' },
+                { x: 2430, y: 230, w: 90, h: 18, color: '#e63946' },
+                { x: 2560, y: 390, w: 240, h: 60, color: '#2b1d0c' }
+            ];
+
+            hazards = [
+                { x: 350, y: 244, w: 16, h: 16, type: 'spike' },
+                { x: 980, y: 234, w: 16, h: 16, type: 'spike' },
+                { x: 1780, y: 184, w: 16, h: 16, type: 'spike' },
+                { x: 2320, y: 264, w: 16, h: 16, type: 'spike' }
+            ];
+
+            collectibles = [
+                { x: 200, y: 290, w: 12, h: 12, collected: false },
+                { x: 340, y: 220, w: 12, h: 12, collected: false },
+                { x: 480, y: 160, w: 12, h: 12, collected: false },
+                { x: 820, y: 270, w: 12, h: 12, collected: false },
+                { x: 1150, y: 150, w: 12, h: 12, collected: false },
+                { x: 1630, y: 220, w: 12, h: 12, collected: false },
+                { x: 1950, y: 110, w: 12, h: 12, collected: false },
+                { x: 2460, y: 190, w: 12, h: 12, collected: false }
+            ];
+
+            totalItems = collectibles.length;
+            document.getElementById("maxScoreText").textContent = totalItems;
+            document.getElementById("scoreText").textContent = score;
+        }
+
+        function setupChapter2Level() {
+            // 거대해진 강아지
+            dog.x = -280;
+            dog.y = 210;
+            dog.width = 230;
+            dog.height = 180;
+            dog.speed = 2.8;
+
+            platforms = [
+                { x: 0, y: 390, w: 3200, h: 60, color: '#3d2612' },
+                { x: 600, y: 330, w: 80, h: 60, color: '#7f5539', label: 'BOX' },
+                { x: 1100, y: 310, w: 100, h: 80, color: '#9c6644', label: 'BOX' },
+                { x: 1650, y: 320, w: 90, h: 70, color: '#7f5539', label: 'BOX' },
+                { x: 2200, y: 330, w: 80, h: 60, color: '#9c6644', label: 'BOX' },
+                { x: 2600, y: 300, w: 110, h: 90, color: '#7f5539', label: 'BOX' }
+            ];
+
+            ch2Obstacles = [
+                { x: 400, y: 366, w: 24, h: 24, type: 'slipper' },
+                { x: 850, y: 368, w: 20, h: 22, type: 'ball' },
+                { x: 1350, y: 366, w: 28, h: 24, type: 'slipper' },
+                { x: 1900, y: 368, w: 22, h: 22, type: 'ball' },
+                { x: 2450, y: 366, w: 26, h: 24, type: 'slipper' },
+                { x: 2850, y: 368, w: 24, h: 22, type: 'ball' }
+            ];
+        }
+
+        function setupChapter3Level() {
+            rollingBoulders = [];
+            boulderTimer = 0;
+
+            platforms = [
+                { x: 0, y: 390, w: 3400, h: 60, color: '#334155' },
+                // 계단식 구조
+                { x: 300, y: 350, w: 100, h: 40, color: '#475569' },
+                { x: 600, y: 320, w: 120, h: 70, color: '#475569' },
+                { x: 1000, y: 340, w: 110, h: 50, color: '#475569' },
+                { x: 1400, y: 310, w: 130, h: 80, color: '#475569' },
+                { x: 1800, y: 330, w: 100, h: 60, color: '#475569' },
+                { x: 2200, y: 300, w: 120, h: 90, color: '#475569' },
+                { x: 2700, y: 320, w: 140, h: 70, color: '#475569' }
+            ];
+
+            ch2Obstacles = [
+                { x: 500, y: 366, w: 20, h: 24, type: 'stepSpike' },
+                { x: 1200, y: 366, w: 20, h: 24, type: 'stepSpike' },
+                { x: 2000, y: 366, w: 20, h: 24, type: 'stepSpike' }
+            ];
+        }
+
+        function setupInputListeners() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+                    if (!keys.up && player.grounded) {
+                        player.vy = player.jumpPower;
+                        player.grounded = false;
+                    }
+                    keys.up = true;
+                    if (e.key === ' ') e.preventDefault();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.up = false;
+            });
+
+            const bindTouch = (id, keyName) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (keyName === 'up' && player.grounded) {
+                        player.vy = player.jumpPower;
+                        player.grounded = false;
+                    }
+                    keys[keyName] = true;
+                });
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    keys[keyName] = false;
+                });
+            };
+
+            bindTouch('btnLeft', 'left');
+            bindTouch('btnRight', 'right');
+            bindTouch('btnJump', 'up');
+        }
+
+        function update() {
+            if (isGameOver || isVictory) return;
+
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.facing = 'left';
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.facing = 'right';
+            } else {
+                player.vx = 0;
+            }
+
+            player.vy += GRAVITY;
+
+            player.x += player.vx;
+            checkHorizontalCollisions();
+
+            player.y += player.vy;
+            player.grounded = false;
+            checkVerticalCollisions();
+
+            let currentLevelWidth = level1Width;
+            if (currentChapter === 2) currentLevelWidth = level2Width;
+            if (currentChapter === 3) currentLevelWidth = level3Width;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > currentLevelWidth) player.x = currentLevelWidth - player.width;
+
+            if (currentChapter === 1) {
+                if (player.y > CANVAS_HEIGHT + 50) {
+                    triggerGameOver("방 바닥의 어두운 틈새로 떨어졌습니다!");
+                }
+
+                for (let h of hazards) {
+                    if (isForgivingColliding(player, h, 6)) {
+                        triggerGameOver("날카로운 먼지 부스러기에 부딪혔습니다!");
+                    }
+                }
+
+                collectibles.forEach(item => {
+                    if (!item.collected && isForgivingColliding(player, item, 2)) {
+                        item.collected = true;
+                        score++;
+                        document.getElementById("scoreText").textContent = score;
+                    }
+                });
+
+                if (isForgivingColliding(player, roomDoor, 4)) {
+                    triggerChapter1Clear();
+                }
+            } else if (currentChapter === 2) {
+                dog.x += dog.speed;
+                if (player.x - dog.x > 300) {
+                    dog.speed = 3.5;
+                } else {
+                    dog.speed = 2.8;
+                }
+
+                score = Math.floor(player.x / 10);
+                document.getElementById("scoreText").textContent = score + "m";
+
+                for (let ob of ch2Obstacles) {
+                    if (isForgivingColliding(player, ob, 4)) {
+                        player.x -= 2;
+                        player.vx = 0;
+                    }
+                }
+
+                if (dog.x + dog.width - 25 >= player.x) {
+                    triggerGameOver("거대 강아지 '장군이'에게 붙잡혔습니다!");
+                }
+
+                if (isForgivingColliding(player, exitFrontDoor, 4)) {
+                    triggerChapter2Clear();
+                }
+            } else if (currentChapter === 3) {
+                score = Math.floor(player.x / 10);
+                document.getElementById("scoreText").textContent = score + "m";
+
+                boulderTimer++;
+                if (boulderTimer > 90) {
+                    boulderTimer = 0;
+                    rollingBoulders.push({
+                        x: camera.x - 40,
+                        y: 350,
+                        radius: 18,
+                        vx: Math.random() * 2 + 3.8,
+                        color: ['#ef4444', '#3b82f6', '#eab308', '#22c55e'][Math.floor(Math.random() * 4)]
+                    });
+                }
+
+                for (let i = rollingBoulders.length - 1; i >= 0; i--) {
+                    let b = rollingBoulders[i];
+                    b.x += b.vx;
+
+                    let bBox = { x: b.x - b.radius, y: b.y - b.radius, width: b.radius * 2, height: b.radius * 2 };
+                    if (isForgivingColliding(player, bBox, 4)) {
+                        triggerGameOver("위에서 굴러 떨어진 거대 레고 공에 부딪혔습니다!");
+                    }
+
+                    if (b.x > player.x + CANVAS_WIDTH) {
+                        rollingBoulders.splice(i, 1);
+                    }
+                }
+
+                for (let ob of ch2Obstacles) {
+                    if (isForgivingColliding(player, ob, 4)) {
+                        triggerGameOver("계단 구석의 뾰족한 난간에 부딪혔습니다!");
+                    }
+                }
+
+                if (isForgivingColliding(player, exitBuildingDoor, 4)) {
+                    triggerChapter3Clear();
+                }
+            }
+
+            camera.x = player.x - CANVAS_WIDTH / 3;
+            if (camera.x < 0) camera.x = 0;
+            if (camera.x > currentLevelWidth - CANVAS_WIDTH) camera.x = currentLevelWidth - CANVAS_WIDTH;
+
+            if (player.vx !== 0) {
+                player.animTimer++;
+                if (player.animTimer % 8 === 0) {
+                    player.animFrame = (player.animFrame + 1) % 2;
+                }
+            } else {
+                player.animFrame = 0;
+            }
+        }
+
+        function isForgivingColliding(p, obj, padding = 4) {
+            const pX = p.x + padding;
+            const pY = p.y + padding;
+            const pW = p.width - padding * 2;
+            const pH = p.height - padding * 2;
+
+            const oX = obj.x;
+            const oY = obj.y;
+            const oW = obj.w || obj.width;
+            const oH = obj.h || obj.height;
+
+            return (
+                pX < oX + oW &&
+                pX + pW > oX &&
+                pY < oY + oH &&
+                pY + pH > oY
+            );
+        }
+
+        function checkHorizontalCollisions() {
+            for (let p of platforms) {
+                if (
+                    player.x < p.x + p.w &&
+                    player.x + player.width > p.x &&
+                    player.y < p.y + p.h &&
+                    player.y + player.height > p.y
+                ) {
+                    if (player.vx > 0) player.x = p.x - player.width;
+                    else if (player.vx < 0) player.x = p.x + p.w;
+                }
+            }
+        }
+
+        function checkVerticalCollisions() {
+            for (let p of platforms) {
+                if (
+                    player.x < p.x + p.w &&
+                    player.x + player.width > p.x &&
+                    player.y < p.y + p.h &&
+                    player.y + player.height > p.y
+                ) {
+                    if (player.vy > 0) {
+                        player.y = p.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                    } else if (player.vy < 0) {
+                        player.y = p.y + p.h;
+                        player.vy = 0;
+                    }
+                }
+            }
+        }
+
+        function triggerGameOver(msg) {
+            isGameOver = true;
+            stopGameLoop();
+            document.getElementById("modalTitle").textContent = "💀 탈출 실패!";
+            document.getElementById("modalTitle").className = "text-2xl sm:text-3xl font-bold mb-3 text-red-500";
+            document.getElementById("modalDesc").textContent = msg;
+            document.getElementById("restartBtn").textContent = "🔄 다시 시도하기";
+            document.getElementById("restartBtn").onclick = restartCurrentChapter;
+            document.getElementById("overlayModal").classList.remove("hidden");
+        }
+
+        function triggerChapter1Clear() {
+            if (isVictory) return;
+            isVictory = true;
+            if (window.GallerySDK) GallerySDK.reportScore('2026-env-plasoup', 1);
+            stopGameLoop();
+            document.getElementById("gameContainer").classList.add("hidden");
+            document.getElementById("intermissionScreen").classList.remove("hidden");
+        }
+
+        function triggerChapter2Clear() {
+            if (isVictory) return;
+            isVictory = true;
+            if (window.GallerySDK) GallerySDK.reportScore('2026-env-plasoup', 2);
+            stopGameLoop();
+            document.getElementById("gameContainer").classList.add("hidden");
+            document.getElementById("intermission3Screen").classList.remove("hidden");
+        }
+
+        function triggerChapter3Clear() {
+            if (isVictory) return;
+            isVictory = true;
+            if (window.GallerySDK) GallerySDK.reportScore('2026-env-plasoup', 3);
+            stopGameLoop();
+            document.getElementById("modalTitle").textContent = "🏆 축하합니다! 대탈출 성공!";
+            document.getElementById("modalTitle").className = "text-2xl sm:text-3xl font-bold mb-3 text-amber-400";
+            document.getElementById("modalDesc").textContent = "레고 방, 거대 강아지, 계단 레고 폭풍을 모두 뚫고 바깥 세상으로 완전 탈출했습니다!";
+            document.getElementById("restartBtn").textContent = "🎮 챕터 1부터 다시하기";
+            document.getElementById("restartBtn").onclick = () => {
+                document.getElementById("overlayModal").classList.add("hidden");
+                startChapter1();
+            };
+            document.getElementById("overlayModal").classList.remove("hidden");
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            ctx.save();
+            ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+            if (currentChapter === 1) {
+                drawRoomBackground();
+                platforms.forEach(p => drawPlatform(p));
+                hazards.forEach(h => drawHazard(h));
+                collectibles.forEach(item => { if (!item.collected) drawCollectible(item); });
+                drawRoomDoor();
+            } else if (currentChapter === 2) {
+                drawHallwayBackground();
+                platforms.forEach(p => drawPlatform(p));
+                ch2Obstacles.forEach(ob => drawCh2Obstacle(ob));
+                drawFrontDoor();
+                drawGiantDog();
+            } else if (currentChapter === 3) {
+                drawStairsBackground();
+                platforms.forEach(p => drawPlatform(p));
+                ch2Obstacles.forEach(ob => drawCh2Obstacle(ob));
+                rollingBoulders.forEach(b => drawRollingBoulder(b));
+                drawExitBuildingDoor();
+            }
+
+            drawPixelPlayer();
+
+            ctx.restore();
+        }
+
+        function drawRoomBackground() {
+            ctx.fillStyle = '#1c1b36';
+            ctx.fillRect(0, 0, level1Width, CANVAS_HEIGHT);
+
+            ctx.fillStyle = '#232242';
+            for (let x = 0; x < level1Width; x += 40) {
+                ctx.fillRect(x, 0, 20, CANVAS_HEIGHT);
+            }
+
+            ctx.fillStyle = '#5c3d2e';
+            ctx.fillRect(0, 380, level1Width, 10);
+        }
+
+        function drawHallwayBackground() {
+            ctx.fillStyle = '#2d1e18';
+            ctx.fillRect(0, 0, level2Width, CANVAS_HEIGHT);
+
+            ctx.fillStyle = '#3a2820';
+            for (let x = 0; x < level2Width; x += 60) {
+                ctx.fillRect(x, 0, 30, CANVAS_HEIGHT);
+            }
+
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(0, 380, level2Width, 10);
+        }
+
+        function drawStairsBackground() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, level3Width, CANVAS_HEIGHT);
+
+            ctx.fillStyle = '#1e293b';
+            for (let x = 0; x < level3Width; x += 100) {
+                ctx.fillRect(x, 0, 50, CANVAS_HEIGHT);
+            }
+
+            // 계단 창문 연출
+            for (let x = 200; x < level3Width; x += 600) {
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(x, 60, 60, 100);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(x + 5, 65, 50, 90);
+            }
+
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(0, 380, level3Width, 10);
+        }
+
+        function drawPlatform(p) {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+
+            if (p.label === 'LEGO') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                for (let sx = p.x + 4; sx < p.x + p.w - 4; sx += 12) {
+                    ctx.fillRect(sx, p.y - 3, 6, 3);
+                }
+            }
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(p.x, p.y + p.h - 4, p.w, 4);
+        }
+
+        function drawHazard(h) {
+            ctx.fillStyle = '#a8a29e';
+            ctx.beginPath();
+            ctx.moveTo(h.x, h.y + h.h);
+            ctx.lineTo(h.x + h.w / 2, h.y);
+            ctx.lineTo(h.x + h.w, h.y + h.h);
+            ctx.fill();
+        }
+
+        function drawCh2Obstacle(ob) {
+            if (ob.type === 'slipper') {
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(ob.x, ob.y + 8, ob.w, ob.h - 8);
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fillRect(ob.x + 4, ob.y + 2, 12, 8);
+            } else if (ob.type === 'ball') {
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(ob.x + 2, ob.y, ob.w - 4, ob.h);
+                ctx.fillRect(ob.x, ob.y + 2, ob.w, ob.h - 4);
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(ob.x + 4, ob.y + 4, 6, 6);
+            } else if (ob.type === 'stepSpike') {
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
+            }
+        }
+
+        function drawRollingBoulder(b) {
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 레고 볼 양각 돌기
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillRect(b.x - 6, b.y - 6, 5, 5);
+            ctx.fillRect(b.x + 2, b.y + 2, 5, 5);
+        }
+
+        function drawCollectible(item) {
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(item.x + 2, item.y, 8, 12);
+            ctx.fillRect(item.x, item.y + 2, 12, 8);
+            ctx.fillStyle = '#a5f3fc';
+            ctx.fillRect(item.x + 2, item.y + 2, 3, 3);
+        }
+
+        function drawRoomDoor() {
+            const dx = roomDoor.x;
+            const dy = roomDoor.y;
+
+            ctx.fillStyle = '#a16207';
+            ctx.fillRect(dx, dy, roomDoor.width, roomDoor.height);
+            ctx.fillStyle = '#ca8a04';
+            ctx.fillRect(dx + 4, dy + 4, roomDoor.width - 8, roomDoor.height - 8);
+            
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(dx + 8, dy + 40, 8, 8);
+        }
+
+        function drawFrontDoor() {
+            const fx = exitFrontDoor.x;
+            const fy = exitFrontDoor.y;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(fx, fy, exitFrontDoor.width, exitFrontDoor.height);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(fx + 6, fy + 6, exitFrontDoor.width - 12, exitFrontDoor.height - 12);
+        }
+
+        function drawExitBuildingDoor() {
+            const fx = exitBuildingDoor.x;
+            const fy = exitBuildingDoor.y;
+
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(fx, fy, exitBuildingDoor.width, exitBuildingDoor.height);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(fx + 6, fy + 6, exitBuildingDoor.width - 12, exitBuildingDoor.height - 12);
+        }
+
+        // 압도적으로 거대해진 픽셀 강아지 '장군이'
+        function drawGiantDog() {
+            const dx = Math.floor(dog.x);
+            const dy = Math.floor(dog.y);
+
+            // 몸통
+            ctx.fillStyle = '#854d0e';
+            ctx.fillRect(dx, dy + 40, 170, 110);
+
+            // 거대 머리
+            ctx.fillRect(dx + 120, dy - 20, 110, 120);
+
+            // 귀
+            ctx.fillStyle = '#581c87';
+            ctx.fillRect(dx + 110, dy - 30, 30, 60);
+
+            // 분홍색 목줄
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(dx + 120, dy + 90, 20, 35);
+
+            // 거대한 이빨 및 입
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(dx + 180, dy + 30, 50, 45);
+
+            ctx.fillStyle = '#ffffff'; // 이빨
+            ctx.fillRect(dx + 180, dy + 30, 10, 15);
+            ctx.fillRect(dx + 200, dy + 30, 10, 15);
+            ctx.fillRect(dx + 220, dy + 30, 10, 15);
+
+            ctx.fillStyle = '#ef4444'; // 혀
+            ctx.fillRect(dx + 190, dy + 55, 30, 20);
+
+            // 눈
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(dx + 175, dy, 16, 16);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(dx + 183, dy + 2, 6, 6);
+
+            // 다리
+            ctx.fillStyle = '#713f12';
+            const legOffset = (Math.floor(Date.now() / 80) % 2 === 0) ? 12 : -12;
+            ctx.fillRect(dx + 20, dy + 150, 30, 40 + legOffset);
+            ctx.fillRect(dx + 110, dy + 150, 30, 40 - legOffset);
+        }
+
+        function drawPixelPlayer() {
+            const px = Math.floor(player.x);
+            const py = Math.floor(player.y);
+            const isLeft = player.facing === 'left';
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(px + 8, py - 3, 6, 3);
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(px + 4, py, 14, 10);
+
+            ctx.fillStyle = '#000000';
+            if (!isLeft) {
+                ctx.fillRect(px + 12, py + 3, 2, 3);
+                ctx.fillRect(px + 7, py + 3, 2, 3);
+                ctx.fillRect(px + 9, py + 7, 4, 2);
+            } else {
+                ctx.fillRect(px + 8, py + 3, 2, 3);
+                ctx.fillRect(px + 13, py + 3, 2, 3);
+                ctx.fillRect(px + 9, py + 7, 4, 2);
+            }
+
+            ctx.fillStyle = '#ff3366';
+            ctx.fillRect(px + 3, py + 10, 16, 11);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + 9, py + 12, 4, 6);
+
+            ctx.fillStyle = '#2563eb';
+            if (player.animFrame === 1 && player.vx !== 0) {
+                ctx.fillRect(px + 3, py + 21, 7, 7);
+                ctx.fillRect(px + 12, py + 20, 7, 6);
+            } else {
+                ctx.fillRect(px + 4, py + 21, 6, 7);
+                ctx.fillRect(px + 12, py + 21, 6, 7);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+
+            if (!isGameOver && !isVictory) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -56,9 +56,9 @@ var id=new URLSearchParams(location.search).get('id');
 fetch('apps.json').then(function(r){return r.json()}).then(function(list){
   var app=list.filter(function(a){return a.id===id})[0];
   if(!app||!app.scoring){$('status').textContent='수료증을 만들 수 있는 앱을 찾지 못했어요.';return}
-  var p=GallerySDK.getProgress(id)||{best:0,plays:0},s=app.scoring;
+  var p=GallerySDK.getProgress(id)||{best:0,plays:0},s=app.scoring,u=s.unit||'점';
   if(!GallerySDK.isPassed(app)){
-    $('status').textContent='아직 수료 조건을 채우지 못했어요. 「'+app.title+'」에서 '+s.pass+'점 이상, '+(s.minPlays||1)+'회 이상 플레이하면 받을 수 있어요. (지금 최고 '+p.best+'점 · '+p.plays+'회)';return;
+    $('status').textContent='아직 수료 조건을 채우지 못했어요. 「'+app.title+'」에서 '+s.pass+u+' 이상, '+(s.minPlays||1)+'회 이상 플레이하면 받을 수 있어요. (지금 최고 '+p.best+u+' · '+p.plays+'회)';return;
   }
   $('status').textContent='축하해요! 「'+app.title+'」 수료 조건을 달성했어요. 이름을 입력하고 수료증을 만들어 보세요.';
   $('form').hidden=false;$('name').focus();
@@ -66,7 +66,7 @@ fetch('apps.json').then(function(r){return r.json()}).then(function(list){
     var n=$('name').value.trim();if(!n){$('name').focus();return}
     $('site').textContent=SITE_NAME;
     $('who').textContent=n;
-    $('body').textContent='위 학생은 「'+app.title+'」 활동에서 기준 점수 '+s.pass+'점 이상(최고 '+p.best+'점)을 달성하여 이 수료증을 수여합니다.';
+    $('body').textContent='위 학생은 「'+app.title+'」 활동에서 기준 '+s.pass+u+' 이상(최고 '+p.best+u+')을 달성하여 이 수료증을 수여합니다.';
     var d=new Date();
     $('meta').textContent=(app.maker?'만든 친구: '+app.maker+'  ·  ':'')+d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
     $('wrap').hidden=false;$('print').hidden=false;

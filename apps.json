@@ -1,19 +1,5 @@
 [
   {
-    "id": "2026-math-gugudan",
-    "title": "구구단 게임",
-    "year": 2026,
-    "subject": "수학",
-    "maker": "샘플 (예시 앱)",
-    "description": "곱셈구구 5문제를 풀어 점수를 모으는 예시 앱이에요.",
-    "path": "2026/수학/구구단게임/",
-    "scoring": {
-      "max": 100,
-      "pass": 80,
-      "minPlays": 2
-    }
-  },
-  {
     "id": "2026-picturebook-trash-fairy",
     "title": "기요미 쓰레기 요정",
     "year": 2026,
@@ -24,6 +10,60 @@
     "scoring": {
       "pass": 5000,
       "minPlays": 2
+    }
+  },
+  {
+    "id": "2026-env-eco-stairs",
+    "title": "에코 스태어즈",
+    "year": 2026,
+    "subject": "환경",
+    "maker": "",
+    "description": "계단을 올라가며 에너지를 지키고, 환경 퀴즈로 부활 기회를 얻어요.",
+    "path": "2026/환경/에코-스태어즈/",
+    "scoring": {
+      "pass": 30,
+      "minPlays": 2,
+      "unit": "점"
+    }
+  },
+  {
+    "id": "2026-env-polar-bear",
+    "title": "북극곰의 빙하 구하기",
+    "year": 2026,
+    "subject": "환경",
+    "maker": "",
+    "description": "녹아내리는 빙하 위에서 5분 동안 살아남아요. 점수는 1인 모드만 기록돼요.",
+    "path": "2026/환경/북극곰-빙하-구하기/",
+    "scoring": {
+      "pass": 2000,
+      "minPlays": 2
+    }
+  },
+  {
+    "id": "2026-env-plasoup",
+    "title": "플라수프 대탈출",
+    "year": 2026,
+    "subject": "환경",
+    "maker": "",
+    "description": "작은 플라스틱 조각이 되어 방, 복도, 계단 3개 챕터를 탈출해요.",
+    "path": "2026/환경/플라수프-대탈출/",
+    "scoring": {
+      "pass": 3,
+      "minPlays": 1,
+      "unit": "챕터"
+    }
+  },
+  {
+    "id": "2026-env-clean-spaceship",
+    "title": "청소 청소 우주선 만들기",
+    "year": 2026,
+    "subject": "환경",
+    "maker": "",
+    "description": "물건을 주워 부품 70개를 모으고, 태너 아저씨 3명을 물리쳐요.",
+    "path": "2026/환경/청소-청소-우주선/",
+    "scoring": {
+      "pass": 100,
+      "minPlays": 1
     }
   }
 ]
