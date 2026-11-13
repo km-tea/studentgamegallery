@@ -16,6 +16,7 @@ header,main{max-width:1000px;margin:0 auto;padding:0 20px}
 header{padding-top:20px;padding-bottom:8px}
 .nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center;min-height:38px;margin-bottom:10px;color:var(--sub);font-size:.95rem}
 .nav .btn{padding:4px 14px}
+.nav .btn.solid{background:var(--blue);color:var(--onblue)}
 h1{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:clamp(2rem,6vw,3rem);margin:0 0 4px;line-height:1.2}
 header p{margin:0;color:var(--sub)}
 .filters{display:flex;flex-wrap:wrap;gap:8px 20px;margin:20px 0 24px}
@@ -43,7 +44,7 @@ header p{margin:0;color:var(--sub)}
 </head>
 <body>
 <header>
-  <nav class="nav" id="nav" aria-label="계정"><a class="btn" href="login.html">로그인 · 내 앱 올리기</a></nav>
+  <nav class="nav" id="nav" aria-label="계정"><a class="btn" href="login.html">학생 로그인</a><a class="btn solid" href="login.html?tab=signup">회원가입</a><a class="btn" href="login.html?role=teacher">교사</a></nav>
   <h1>우리 반 웹앱 갤러리</h1>
   <p>친구들이 만든 앱을 해 보고, 기준 점수를 넘기면 수료증을 받아요.</p>
 </header>

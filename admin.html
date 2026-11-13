@@ -69,7 +69,7 @@
       <p class="hint">스스로 가입하기 어려운 친구를 위해 선생님이 대신 만들어 줄 수 있어요. 비밀번호는 학생에게 알려 주세요.</p>
       <form id="newUser">
         <div class="grid">
-          <label>아이디<input id="nuName" maxlength="20" autocapitalize="none" autocomplete="off" required></label>
+          <label>이메일<input id="nuName" type="email" maxlength="60" autocapitalize="none" autocomplete="off" required></label>
           <label>별명<input id="nuNick" maxlength="12" autocomplete="off" required></label>
           <label>비밀번호 (6자 이상)<input id="nuPw" autocomplete="off" minlength="6" required></label>
         </div>
@@ -79,7 +79,7 @@
     </section>
     <section class="card">
       <h2>계정 목록 <span id="ucount" class="hint"></span></h2>
-      <div class="scroll"><table><thead><tr><th>아이디 · 별명</th><th>앱</th><th>마지막 로그인</th><th>상태</th><th></th></tr></thead><tbody id="ulist"></tbody></table></div>
+      <div class="scroll"><table><thead><tr><th>이메일(아이디) · 별명</th><th>앱</th><th>마지막 로그인</th><th>상태</th><th></th></tr></thead><tbody id="ulist"></tbody></table></div>
     </section>
   </div>
 
@@ -212,7 +212,7 @@ $('ulist').onclick = function (e) {
   var u = users.filter(function (x) { return x.id === b.dataset.id; })[0]; if (!u) return;
   var url = '/api/admin/users/' + encodeURIComponent(u.id);
   if (b.dataset.act === 'pw') {
-    var pw = prompt('「' + u.username + '」의 새 비밀번호 (6자 이상)\n정한 뒤 학생에게 알려 주세요.', randomPw());
+    var pw = prompt('「' + u.username + '」 학생의 새 비밀번호 (6자 이상)\n정한 뒤 학생에게 알려 주세요.', randomPw());
     if (pw) api('PATCH', url, { password: pw }).then(function () { alert('바꿨어요. 새 비밀번호: ' + pw); }).catch(fail);
   }
   if (b.dataset.act === 'toggle') api('PATCH', url, { status: u.status === 'active' ? 'disabled' : 'active' }).then(reloadUsers).catch(fail);
@@ -224,7 +224,7 @@ $('ulist').onclick = function (e) {
 $('newUser').onsubmit = function (e) {
   e.preventDefault(); $('nuMsg').textContent = '';
   api('POST', '/api/admin/users', { username: $('nuName').value, nickname: $('nuNick').value, password: $('nuPw').value })
-    .then(function () { say('nuMsg', true, '만들었어요. 아이디 ' + $('nuName').value.toLowerCase() + ' / 비밀번호 ' + $('nuPw').value); $('nuName').value = $('nuNick').value = $('nuPw').value = ''; return reloadUsers(); })
+    .then(function () { say('nuMsg', true, '만들었어요. 이메일 ' + $('nuName').value.toLowerCase() + ' / 비밀번호 ' + $('nuPw').value); $('nuName').value = $('nuNick').value = $('nuPw').value = ''; return reloadUsers(); })
     .catch(function (er) { say('nuMsg', false, er.message); });
 };
 

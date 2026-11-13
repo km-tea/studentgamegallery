@@ -13,8 +13,8 @@
 <body>
 <main>
   <p><a href="./">← 갤러리로 돌아가기</a></p>
-  <h1>내 앱 올리기</h1>
-  <p class="sub">가입하고 로그인하면 내가 만든 앱을 갤러리에 올릴 수 있어요.</p>
+  <h1 id="h1">내 앱 올리기</h1>
+  <p class="sub" id="subline">가입하고 로그인하면 내가 만든 앱을 갤러리에 올릴 수 있어요.</p>
 
   <div id="setup" class="notice" hidden>아직 관리자 계정이 없어요. 선생님: Netlify 환경변수에 <b>ADMIN_PASSWORD</b>를 넣고 다시 배포해 주세요.</div>
 
@@ -30,18 +30,18 @@
     </div>
 
     <form id="loginForm" class="card">
-      <label>아이디<input id="lu" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
+      <label><span id="luLabel">이메일</span><input id="lu" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
       <label>비밀번호<input id="lp" type="password" autocomplete="current-password" required></label>
       <button type="submit">로그인</button>
       <p id="loginMsg" class="msg err" role="alert"></p>
-      <p class="hint">선생님도 여기서 로그인하면 관리 화면으로 가요.</p>
+      <p class="hint" id="loginHint">선생님은 위의 「교사 로그인」으로 들어오세요.</p>
     </form>
 
     <form id="signupForm" class="card" hidden>
       <div id="codeBox"><label>가입 코드 <span class="hint">(선생님께 받은 코드)</span><input id="sc" autocomplete="off" autocapitalize="characters" maxlength="20"></label></div>
-      <label>아이디 <span class="hint">영어 소문자·숫자·밑줄(_) 3~20자</span><input id="su" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20" required></label>
+      <label>이메일 <span class="hint">로그인할 때 써요. 선생님만 볼 수 있어요</span><input id="su" type="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="60" placeholder="name@gmail.com" required></label>
       <label>별명 <span class="hint">갤러리에 '만든 친구'로 보여요. 실명은 쓰지 마세요!</span><input id="sn" maxlength="12" required></label>
-      <label>비밀번호 <span class="hint">6자 이상. 잊어버리면 선생님이 새로 만들어 줘요</span><input id="sp" type="password" autocomplete="new-password" minlength="6" required></label>
+      <label>비밀번호 <span class="hint">6자 이상. 잊어버리면 선생님이 새로 만들어 줘요 (이메일로 찾기는 안 돼요)</span><input id="sp" type="password" autocomplete="new-password" minlength="6" required></label>
       <button type="submit">가입하고 시작하기</button>
       <p id="signupMsg" class="msg err" role="alert"></p>
     </form>
@@ -51,6 +51,15 @@
 <script src="site.js"></script>
 <script>
 var cfg = { signupOpen: true, codeRequired: true };
+var q = new URLSearchParams(location.search);
+// 교사 로그인 모드는 서버 응답을 기다리지 않고 바로 적용해요
+if (q.get('role') === 'teacher') {
+    // 교사 로그인 모드: 가입 탭을 숨기고 문구를 바꿔요
+    $('h1').textContent = '교사 로그인'; $('subline').textContent = '선생님 전용이에요. 관리 화면으로 들어가요.';
+    $('tabSignup').hidden = true; $('tabLogin').textContent = '교사 로그인'; $('luLabel').textContent = '교사 아이디 (기본: admin)';
+    $('loginHint').textContent = '비밀번호는 Netlify에 등록한 ADMIN_PASSWORD(또는 바꾼 비밀번호)예요.';
+}
+
 // 로그인 뒤 돌아갈 곳: 같은 사이트 안의 .html 주소만 허용
 function nextUrl(user) {
   var n = new URLSearchParams(location.search).get('next');
@@ -91,7 +100,7 @@ Promise.all([api('GET', '/api/auth/config').catch(function () { return {}; }), m
     $('goBtn').href = r[1].role === 'admin' ? 'admin.html' : 'my.html';
     $('goBtn').textContent = r[1].role === 'admin' ? '관리 화면으로' : '내 앱 관리';
   }
-  if (location.hash === '#signup') tab('signup');
+  if (q.get('tab') === 'signup' || (location.hash === '#signup' && q.get('role') !== 'teacher')) tab('signup');
 });
 </script>
 </body>

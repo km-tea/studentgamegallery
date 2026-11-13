@@ -1,6 +1,6 @@
 // 교사 전용: 학생 계정 관리(목록·직접 만들기·비밀번호 초기화·사용 중지·삭제) + 갤러리 설정
 import { getSql, json, getSettings, SETTING_DEFAULTS } from './_lib/db.mjs';
-import { requireUser } from './_lib/auth.mjs';
+import { requireUser, cleanEmail } from './_lib/auth.mjs';
 import { hashPassword, randomId } from './_lib/crypto.mjs';
 
 export const config = { path: ['/api/admin/users', '/api/admin/users/:id', '/api/admin/settings'] };
@@ -12,8 +12,6 @@ export default async (req, context) => {
     return json({ error: '잠시 후 다시 시도해 주세요' }, 500);
   }
 };
-
-const USERNAME = /^[a-z0-9_]{3,20}$/;
 
 function cleanSettings(b) {
   const out = {};
@@ -69,16 +67,16 @@ export async function handle(req, context, getDb) {
   if (req.method === 'POST' && !id) {
     let b;
     try { b = await req.json(); } catch { return json({ error: '요청 형식이 올바르지 않아요' }, 400); }
-    const username = String(b.username || '').trim().toLowerCase();
+    const username = cleanEmail(b.username);
     const nickname = String(b.nickname || '').trim().slice(0, 12);
     const password = String(b.password || '');
-    if (!USERNAME.test(username)) return json({ error: '아이디는 영어 소문자·숫자·밑줄(_)로 3~20자로 만들어 주세요' }, 400);
+    if (!username) return json({ error: '이메일 주소를 올바르게 입력해 주세요' }, 400);
     if (!nickname) return json({ error: '별명을 입력해 주세요' }, 400);
     if (password.length < 6 || password.length > 72) return json({ error: '비밀번호는 6자 이상으로 만들어 주세요' }, 400);
     const r = await db`INSERT INTO users (id, username, nickname, pw_hash, role)
       VALUES (${randomId('u')}, ${username}, ${nickname}, ${hashPassword(password)}, 'student')
       ON CONFLICT (username) DO NOTHING RETURNING id`;
-    if (!r.length) return json({ error: '이미 있는 아이디예요' }, 409);
+    if (!r.length) return json({ error: '이미 가입된 이메일이에요' }, 409);
     return json({ ok: true, id: r[0].id });
   }
 

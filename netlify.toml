@@ -20,3 +20,29 @@
   for = "/login.html"
   [headers.values]
     X-Robots-Tag = "noindex"
+
+# 짧은 주소 (.html 없이도 접속)
+[[redirects]]
+  from = "/login"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/signup"
+  to = "/login.html?tab=signup"
+  status = 302
+
+[[redirects]]
+  from = "/teacher"
+  to = "/login.html?role=teacher"
+  status = 302
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/my"
+  to = "/my.html"
+  status = 200

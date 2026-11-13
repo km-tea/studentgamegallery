@@ -74,7 +74,7 @@ export async function migrate(db) {
   )`;
 
   // 처음 한 번: 학급 가입 코드를 무작위로 만들어 둔다 (교사가 관리 화면에서 바꿀 수 있음)
-  await db`INSERT INTO settings (key, value) VALUES ('signup_code', ${randomCode(6)}) ON CONFLICT (key) DO NOTHING`;
+  await db`INSERT INTO settings (key, value) VALUES ('signup_code', ${(env('SIGNUP_CODE') || '').trim().toUpperCase().slice(0, 20) || randomCode(6)}) ON CONFLICT (key) DO NOTHING`;
 
   // 관리자 계정이 하나도 없으면 환경변수(ADMIN_PASSWORD)로 처음 한 번 만든다
   const admins = await db`SELECT 1 AS x FROM users WHERE role = 'admin' LIMIT 1`;

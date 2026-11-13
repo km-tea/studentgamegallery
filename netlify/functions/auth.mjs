@@ -1,7 +1,7 @@
 // 계정: 가입 / 로그인 / 로그아웃 / 내 정보 / 비밀번호 변경 / 화면용 공개 설정
 import { getSql, json, getSettings, subjectList } from './_lib/db.mjs';
 import { hashPassword, verifyPassword, DUMMY_HASH, safeEqual, randomId } from './_lib/crypto.mjs';
-import { sessionCookie, clearCookie, currentUser, publicUser, checkOrigin } from './_lib/auth.mjs';
+import { sessionCookie, clearCookie, currentUser, publicUser, checkOrigin, cleanEmail } from './_lib/auth.mjs';
 
 export const config = { path: '/api/auth/:action' };
 
@@ -13,7 +13,6 @@ export default async (req, context) => {
   }
 };
 
-const USERNAME = /^[a-z0-9_]{3,20}$/;
 const MAX_FAILS = 5, LOCK_MIN = 5;
 
 export async function handle(req, context, getDb) {
@@ -55,10 +54,10 @@ export async function handle(req, context, getDb) {
     if (s.signup_code && !safeEqual(String(b.code || '').trim().toUpperCase(), s.signup_code.toUpperCase()))
       return json({ error: '가입 코드가 맞지 않아요. 선생님께 받은 코드를 확인해 주세요' }, 403);
 
-    const username = String(b.username || '').trim().toLowerCase();
+    const username = cleanEmail(b.username); // 이메일을 username 칸에 저장한다
     const nickname = String(b.nickname || '').trim().slice(0, 12);
     const password = String(b.password || '');
-    if (!USERNAME.test(username)) return json({ error: '아이디는 영어 소문자·숫자·밑줄(_)로 3~20자로 만들어 주세요' }, 400);
+    if (!username) return json({ error: '이메일 주소를 올바르게 입력해 주세요 (예: name@gmail.com)' }, 400);
     if (!nickname) return json({ error: '별명을 입력해 주세요 (실명은 쓰지 마세요)' }, 400);
     if (password.length < 6 || password.length > 72) return json({ error: '비밀번호는 6자 이상으로 만들어 주세요' }, 400);
 
@@ -66,7 +65,7 @@ export async function handle(req, context, getDb) {
     const r = await db`INSERT INTO users (id, username, nickname, pw_hash, role)
       VALUES (${id}, ${username}, ${nickname}, ${hashPassword(password)}, 'student')
       ON CONFLICT (username) DO NOTHING RETURNING id, token_version`;
-    if (!r.length) return json({ error: '이미 있는 아이디예요. 다른 아이디를 써 주세요' }, 409);
+    if (!r.length) return json({ error: '이미 가입된 이메일이에요. 로그인해 주세요' }, 409);
     const user = { id, username, nickname, role: 'student', token_version: r[0].token_version };
     return json({ ok: true, user: publicUser(user) }, 200, { 'set-cookie': sessionCookie(req, user) });
   }
@@ -86,7 +85,7 @@ export async function handle(req, context, getDb) {
           FROM (SELECT id, CASE WHEN locked_until IS NOT NULL AND locked_until <= now() THEN 1 ELSE failed_count + 1 END AS nc
                 FROM users WHERE id = ${u.id}) n WHERE x.id = n.id`;
       }
-      return json({ error: '아이디 또는 비밀번호가 맞지 않아요' }, 401);
+      return json({ error: '이메일 또는 비밀번호가 맞지 않아요' }, 401);
     }
     if (u.status !== 'active') return json({ error: '사용이 중지된 계정이에요. 선생님께 문의해 주세요' }, 403);
     await db`UPDATE users SET failed_count = 0, locked_until = NULL, last_login_at = now() WHERE id = ${u.id}`;

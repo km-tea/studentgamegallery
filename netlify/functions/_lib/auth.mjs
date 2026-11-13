@@ -43,6 +43,13 @@ export async function currentUser(req, db) {
   return u;
 }
 
+// 로그인 아이디는 이메일(학생). 선생님 계정만 'admin' 같은 짧은 아이디도 가능
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export function cleanEmail(v) {
+  const e = String(v || '').trim().toLowerCase();
+  return e.length <= 60 && EMAIL_RE.test(e) ? e : null;
+}
+
 export const publicUser = (u) => ({ id: u.id, username: u.username, nickname: u.nickname, role: u.role });
 
 // 로그인 필요(role을 주면 그 역할만 허용). 통과하면 { user }, 아니면 { res } 를 돌려준다.
