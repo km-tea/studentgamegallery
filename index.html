@@ -13,7 +13,9 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Gowun Dodum','Noto Sans KR',system-ui,sans-serif;line-height:1.6}
 header,main{max-width:1000px;margin:0 auto;padding:0 20px}
-header{padding-top:36px;padding-bottom:8px}
+header{padding-top:20px;padding-bottom:8px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center;min-height:38px;margin-bottom:10px;color:var(--sub);font-size:.95rem}
+.nav .btn{padding:4px 14px}
 h1{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:clamp(2rem,6vw,3rem);margin:0 0 4px;line-height:1.2}
 header p{margin:0;color:var(--sub)}
 .filters{display:flex;flex-wrap:wrap;gap:8px 20px;margin:20px 0 24px}
@@ -41,6 +43,7 @@ header p{margin:0;color:var(--sub)}
 </head>
 <body>
 <header>
+  <nav class="nav" id="nav" aria-label="계정"><a class="btn" href="login.html">로그인 · 내 앱 올리기</a></nav>
   <h1>우리 반 웹앱 갤러리</h1>
   <p>친구들이 만든 앱을 해 보고, 기준 점수를 넘기면 수료증을 받아요.</p>
 </header>
@@ -76,11 +79,18 @@ function render(){
     var stamp=s?'<div class="stamp'+(ok?' done':'')+'">'+(ok?'수료':'도전')+'</div>':'';
     var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+(s.unit||'점')+' · '+plays+'회 플레이<br>수료 조건: '+s.pass+(s.unit||'점')+' 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
     var cert=s?(ok?'<a class="btn cert" href="certificate.html?id='+encodeURIComponent(a.id)+'">수료증 받기</a>':''):'';
-    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path)+'">플레이</a>'+cert+'</div></article>';
+    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path||('play.html?id='+encodeURIComponent(a.id)))+'">플레이</a>'+cert+'</div></article>';
   }).join('');
 }
+// 로그인 상태에 따라 오른쪽 위 메뉴를 바꿔요 (실패해도 갤러리는 그대로 보여요)
+fetch('/api/auth/me',{credentials:'same-origin'}).then(function(r){return r.ok?r.json():{}}).then(function(d){
+  var u=d&&d.user;if(!u)return;
+  document.getElementById('nav').innerHTML='<span>'+esc(u.nickname)+'</span>'+(u.role==='admin'?'<a class="btn" href="admin.html">관리 화면</a>':'<a class="btn" href="my.html">내 앱 관리</a>');
+}).catch(function(){});
 window.addEventListener('pageshow',function(e){if(e.persisted&&apps.length)render()});
-fetch('apps.json').then(function(r){return r.json()}).then(function(d){apps=d;chips();render()})
+// 폴더로 올린 앱(apps.json)과 관리 화면으로 올린 앱(/api/apps)을 합쳐서 보여 줘요
+function loadJson(u){return fetch(u).then(function(r){return r.ok?r.json():[]}).catch(function(){return[]})}
+Promise.all([loadJson('apps.json'),loadJson('/api/apps')]).then(function(r){apps=r[0].concat(r[1]);if(!apps.length)throw 0;chips();render()})
 .catch(function(){grid.innerHTML='<p class="empty">apps.json을 불러오지 못했어요. 파일 위치와 형식을 확인해 주세요. (파일을 그냥 열면 안 되고, Netlify나 로컬 서버에서 열어야 해요.)</p>'});
 </script>
 </body>

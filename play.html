@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>플레이</title>
+<style>
+html,body{height:100%;margin:0;background:#10172A;color:#EEF2FB;font-family:'Noto Sans KR',system-ui,sans-serif}
+#bar{height:44px;display:flex;align-items:center;gap:14px;padding:0 12px;box-sizing:border-box}
+#bar a{color:#FFD66B;text-decoration:none;white-space:nowrap}
+#title{font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+#stat{font-size:.9rem;color:#9AA6C4;white-space:nowrap}
+#cert{display:none;background:#FFC83D;color:#14213D!important;border-radius:8px;padding:3px 10px;font-weight:700}
+#toast{position:fixed;left:50%;top:52px;transform:translateX(-50%);background:#FFC83D;color:#14213D;padding:8px 16px;border-radius:10px;display:none;z-index:5}
+iframe{display:block;width:100%;border:0;background:#fff}
+</style>
+</head>
+<body>
+<div id="bar"><a href="./">← 갤러리</a><span id="title"></span><span id="stat"></span><a id="cert" href="#">수료증 받기</a></div>
+<div id="toast" role="status"></div>
+<!-- 게임은 sandbox(격리) 상태로 실행돼요: 이 사이트의 저장 기록·서버에 접근할 수 없어요 -->
+<iframe id="game" title="게임" sandbox="allow-scripts allow-popups allow-pointer-lock" allow="autoplay; fullscreen"></iframe>
+<script src="gallery-sdk.js"></script>
+<script>
+var id=new URLSearchParams(location.search).get('id'),app=null,frame=document.getElementById('game');
+function fit(){frame.style.height=Math.max(200,innerHeight-44)+'px'}
+addEventListener('resize',fit);addEventListener('orientationchange',function(){setTimeout(fit,200)});fit();
+function unit(){return(app&&app.scoring&&app.scoring.unit)||'점'}
+function showStat(){
+  var p=GallerySDK.getProgress(id)||{best:0,plays:0},s=app&&app.scoring;
+  document.getElementById('stat').textContent='내 최고 '+p.best+unit()+' · '+p.plays+'회'+(s?' (수료 '+s.pass+unit()+')':'');
+  var c=document.getElementById('cert');
+  if(s&&GallerySDK.isPassed(app)){c.style.display='inline-block';c.href='certificate.html?id='+encodeURIComponent(id)}
+}
+function toast(t){var e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.display='none'},3500)}
+// 앱 1개 조회: 공개된 앱은 누구나, 승인 대기·숨김 앱은 올린 학생 본인과 교사만 볼 수 있어요
+fetch('/api/apps/'+encodeURIComponent(id||''),{credentials:'same-origin'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(a){
+  app=(a&&a.id)?a:null;
+  if(!app){document.getElementById('title').textContent='앱을 찾을 수 없어요';return}
+  document.title=app.title;document.getElementById('title').textContent=app.title+(app.status&&app.status!=='published'?' (공개 전 미리보기)':'');showStat();
+  frame.src='/api/play/'+encodeURIComponent(id);
+});
+// 게임이 보내는 점수 메시지만 받는다 (이 화면의 iframe에서 온 것만)
+addEventListener('message',function(e){
+  if(!app||e.source!==frame.contentWindow||!e.data||e.data.gallery!==1||e.data.type!=='score')return;
+  var sc=Math.max(0,Math.min(1e9,Number(e.data.score)||0));
+  GallerySDK.reportScore(id,sc);showStat();
+  var passed=app.scoring&&GallerySDK.isPassed(app);
+  toast(passed?'🎉 수료 조건을 달성했어요! 위의 「수료증 받기」를 눌러 보세요':'점수 기록: '+sc+unit());
+});
+</script>
+</body>
+</html>

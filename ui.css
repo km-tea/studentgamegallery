@@ -1,0 +1,46 @@
+/* 로그인·내 앱·관리 화면이 함께 쓰는 스타일 (갤러리 첫 화면과 같은 색·글꼴) */
+:root{--bg:#F4F7FB;--card:#fff;--ink:#14213D;--sub:#5B6784;--line:#D9E0EC;--blue:#2459D6;--onblue:#fff;--sun:#FFC83D;--red:#C0392B;--track:#E6ECF6;--field:#fff;--okbg:#E3F5EA;--ok:#1E7A46;--warnbg:#FFF3D6;--warn:#8A5A00;--redbg:#FDE7E4}
+@media(prefers-color-scheme:dark){:root{--bg:#10172A;--card:#1A2440;--ink:#EEF2FB;--sub:#9AA6C4;--line:#2D3A5E;--blue:#6F97FF;--onblue:#10172A;--sun:#FFD66B;--red:#FF8F82;--track:#2D3A5E;--field:#121B33;--okbg:#17382A;--ok:#7FD9A4;--warnbg:#3B3114;--warn:#FFD66B;--redbg:#40201D}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Gowun Dodum','Noto Sans KR',system-ui,sans-serif;line-height:1.6}
+main{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+h1{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:clamp(1.7rem,5vw,2.3rem);margin:0 0 4px;line-height:1.25}
+h2{font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.25rem;margin:0 0 12px}
+a{color:var(--blue)}
+.sub{color:var(--sub);margin:0 0 20px}
+.hint{font-size:.86rem;color:var(--sub)}
+.topbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+.topbar .who{color:var(--sub)}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+label{display:block;font-size:.92rem;color:var(--sub);margin-bottom:12px}
+input,select,textarea{display:block;width:100%;font:inherit;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;margin-top:3px;background:var(--field);color:var(--ink)}
+input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;transform:scale(1.2)}
+label.check{display:flex;align-items:center;color:var(--ink);margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+button,.btn{font:inherit;border:1.5px solid var(--blue);border-radius:10px;padding:8px 16px;cursor:pointer;background:var(--blue);color:var(--onblue);text-decoration:none;display:inline-block;line-height:1.4}
+button.ghost,.btn.ghost{background:transparent;color:var(--blue)}
+button.danger{background:transparent;color:var(--red);border-color:var(--red)}
+button.sm,.btn.sm{padding:3px 11px;font-size:.88rem}
+button:disabled{opacity:.55;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.msg{margin:10px 0 0;font-weight:700}.err{color:var(--red)}.good{color:var(--ok)}
+.notice{border-radius:10px;padding:10px 14px;margin:0 0 14px;background:var(--warnbg);color:var(--warn)}
+.notice.info{background:var(--track);color:var(--ink)}
+ul.checks{list-style:none;padding:0;margin:10px 0 0}ul.checks li{padding:4px 0;border-bottom:1px dashed var(--line)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top;font-size:.93rem}
+th{color:var(--sub);font-weight:400}
+.scroll{overflow-x:auto}
+.badge{font-size:.78rem;border-radius:99px;padding:1px 10px;background:var(--track);white-space:nowrap}
+.badge.published,.badge.active{background:var(--okbg);color:var(--ok)}
+.badge.pending{background:var(--warnbg);color:var(--warn)}
+.badge.hidden,.badge.rejected,.badge.disabled{background:var(--redbg);color:var(--red)}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{border-radius:999px;background:var(--card);color:var(--ink);border:1.5px solid var(--line);padding:5px 16px}
+.tab[aria-selected=true]{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.tab i{font-style:normal;background:var(--sun);color:#14213D;border-radius:99px;padding:0 7px;margin-left:6px;font-size:.8rem}
+.mine{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.mine .card{margin:0;display:flex;flex-direction:column;gap:6px}
+.mine h3{margin:0;font-family:'Jua','Noto Sans KR',sans-serif;font-weight:400;font-size:1.15rem}
+pre.prompt{white-space:pre-wrap;background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:12px;font:inherit;font-size:.9rem;margin:10px 0}
+[hidden]{display:none!important}

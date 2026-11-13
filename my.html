@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>내 앱 · 우리 반 웹앱 갤러리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <div><h1>내 앱</h1><span class="who" id="who"></span></div>
+    <div class="row"><a class="btn ghost sm" href="./">갤러리 보기</a><button class="ghost sm" id="outBtn">로그아웃</button></div>
+  </div>
+  <div id="policy" class="notice info" hidden></div>
+
+  <section class="card">
+    <h2 id="formTitle">새 앱 올리기</h2>
+    <label>게임 파일 (.html) <span id="fileHint" class="hint"></span><input id="file" type="file" accept=".html,.htm,text/html"></label>
+    <div class="grid">
+      <label>앱 이름<input id="title" maxlength="60"></label>
+      <label>연도<input id="year" type="number" min="2000" max="2100"></label>
+      <label>주제<select id="subject"></select></label>
+    </div>
+    <label>한 줄 설명<input id="description" maxlength="200" placeholder="어떤 게임인지 친구들에게 알려 주세요"></label>
+    <div class="row">
+      <button id="checkBtn" class="ghost">검사하기 (올리지 않음)</button>
+      <button id="saveBtn">올리기</button>
+      <button id="resetBtn" class="ghost" hidden>새로 입력</button>
+    </div>
+    <p id="msg" class="msg" role="status"></p>
+    <ul id="checks" class="checks"></ul>
+    <p class="hint">별명은 '<span id="nick"></span>'(으)로 표시돼요. 수료증 기준 점수는 선생님이 정해 줘요.</p>
+  </section>
+
+  <section class="card">
+    <h2>내가 올린 앱 <span id="count" class="hint"></span></h2>
+    <div id="list" class="mine"></div>
+  </section>
+
+  <section class="card">
+    <h2>AI에게 게임 만들어 달라고 할 때</h2>
+    <p class="hint">아래 글을 <b>맨 앞에 붙여서</b> 요청하면 갤러리에서 점수·수료증·태블릿 조작이 잘 돼요.</p>
+    <details><summary>글 보기</summary>
+<pre class="prompt" id="prompt">아래 조건을 지켜서 게임을 만들어 줘.
+
+1. 파일 하나로 끝나는 HTML 게임(HTML, CSS, JavaScript를 한 파일에)으로 만들어 줘.
+2. 태블릿에서 손가락으로 할 수 있어야 해. 키보드가 없어도 되도록 화면에 조작 버튼을 넣거나 터치·드래그로 움직이게 해 줘. 화면 크기에 맞게 크기가 자동으로 조절되고, 가로·세로 화면 모두에서 잘리지 않게 해 줘.
+3. 게임이 한 판 끝날 때마다(성공이든 실패든) 점수를 한 번만 갤러리에 보고하는 아래 한 줄을 꼭 넣어 줘. 점수는 숫자여야 해.
+   if (window.GallerySDK) GallerySDK.reportScore('my-game', 점수);
+4. 인터넷으로 데이터를 보내거나 받는 코드(fetch, 서버, Firebase 등)는 쓰지 마. 외부 주소는 Tailwind CDN, cdnjs, jsDelivr, Google Fonts만 써도 돼.
+5. 이름이나 개인정보를 입력받는 칸은 만들지 마. (별명이 필요하면 "별명(실명 금지)"이라고 써 줘.)
+6. 점수를 올리기 쉽게 속여서 만들지 말고, 열심히 할수록 점수가 높아지게 만들어 줘.
+
+(여기에 만들고 싶은 게임 설명을 써요)</pre>
+    </details>
+    <button class="ghost sm" id="copyBtn">글 복사하기</button> <span id="copied" class="hint"></span>
+  </section>
+
+  <section class="card">
+    <h2>비밀번호 바꾸기</h2>
+    <form id="pwForm">
+      <div class="grid">
+        <label>지금 비밀번호<input id="pwCur" type="password" autocomplete="current-password" required></label>
+        <label>새 비밀번호 (6자 이상)<input id="pwNew" type="password" autocomplete="new-password" minlength="6" required></label>
+      </div>
+      <button type="submit" class="ghost">바꾸기</button>
+      <p id="pwMsg" class="msg" role="status"></p>
+    </form>
+  </section>
+</main>
+<script src="site.js"></script>
+<script>
+var editing = null, apps = [], cfg = {}, user = null;
+
+function resetForm() {
+  editing = null; $('title').value = ''; $('description').value = ''; $('year').value = new Date().getFullYear();
+  $('file').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = '';
+  $('resetBtn').hidden = true; $('checks').innerHTML = ''; $('msg').textContent = '';
+}
+function startEdit(a) {
+  editing = a.id; $('title').value = a.title; $('year').value = a.year; $('description').value = a.description || '';
+  if (cfg.subjects && cfg.subjects.indexOf(a.subject) < 0) { var o = document.createElement('option'); o.textContent = a.subject; $('subject').appendChild(o); }
+  $('subject').value = a.subject; $('file').value = '';
+  $('formTitle').textContent = '앱 수정: ' + a.title; $('fileHint').textContent = '(새 파일을 고르지 않으면 정보만 수정돼요)';
+  $('resetBtn').hidden = false; $('checks').innerHTML = ''; $('msg').textContent = '';
+  var note = cfg.autoPublish ? '' : ' 고치면 선생님이 다시 확인해요.';
+  if (a.status === 'published' && note) $('msg').textContent = '지금 공개 중인 앱이에요.' + note;
+  scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('resetBtn').onclick = resetForm;
+
+function reload() { return api('GET', '/api/my/apps').then(function (rows) { apps = rows; renderList(); }); }
+function renderList() {
+  $('count').textContent = '(' + apps.length + '/' + cfg.maxApps + '개)';
+  $('list').innerHTML = apps.length ? apps.map(function (a) {
+    var w = ((a.checks && a.checks.checks) || []).filter(function (c) { return c.level === 'warn'; }).length;
+    var note = a.status === 'rejected' ? '<div class="notice">선생님 메모: ' + esc(a.review_note || '고쳐서 다시 올려 주세요') + '</div>' : '';
+    var wait = a.status === 'pending' ? '<div class="hint">선생님이 확인하면 갤러리에 나타나요.</div>' : '';
+    return '<article class="card"><h3>' + esc(a.title) + '</h3><div><span class="badge ' + esc(a.status) + '">' + esc(STATUS[a.status] || a.status) + '</span></div>'
+      + '<div class="hint">' + esc(a.year) + '년 · ' + esc(a.subject) + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</div>' + note + wait
+      + '<div class="row"><a class="btn sm" href="play.html?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">해 보기</a>'
+      + '<button class="ghost sm" data-act="edit" data-id="' + esc(a.id) + '">수정</button>'
+      + '<button class="danger sm" data-act="del" data-id="' + esc(a.id) + '">삭제</button></div></article>';
+  }).join('') : '<p class="hint">아직 올린 앱이 없어요. 위에서 첫 앱을 올려 보세요!</p>';
+}
+$('list').onclick = function (e) {
+  var b = e.target.closest('button[data-act]'); if (!b) return;
+  var a = apps.filter(function (x) { return x.id === b.dataset.id; })[0]; if (!a) return;
+  if (b.dataset.act === 'edit') startEdit(a);
+  if (b.dataset.act === 'del' && confirm('「' + a.title + '」을(를) 삭제할까요? 되돌릴 수 없어요.'))
+    api('DELETE', '/api/my/apps/' + encodeURIComponent(a.id)).then(reload).then(function () { if (editing === a.id) resetForm(); });
+};
+
+function payload(dry) {
+  var f = $('file').files[0];
+  return (f ? f.text() : Promise.resolve(null)).then(function (html) {
+    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, description: $('description').value, dryRun: !!dry };
+    if (html !== null) p.html = html; return p;
+  });
+}
+function run(dry) {
+  $('msg').className = 'msg'; $('msg').textContent = '처리 중…'; $('checks').innerHTML = '';
+  $('saveBtn').disabled = $('checkBtn').disabled = true;
+  var wasEditing = !!editing;
+  payload(dry).then(function (p) { return api('POST', '/api/my/apps', p); }).then(function (d) {
+    showChecks($('checks'), d);
+    if (dry) { $('msg').textContent = '검사만 했어요 (아직 올라가지 않았어요)'; return; }
+    $('msg').className = 'msg good';
+    $('msg').textContent = d.status === 'published' ? (wasEditing ? '수정했어요!' : '올렸어요! 갤러리에 바로 나타나요.')
+      : d.status === 'hidden' ? '수정했어요. (선생님이 숨겨 둔 앱이에요)'
+      : '올렸어요! 선생님이 확인하면 갤러리에 나타나요.';
+    return reload().then(function () { editing = null; $('file').value = ''; $('title').value = ''; $('description').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = ''; $('resetBtn').hidden = true; });
+  }).catch(function (e) {
+    if (e.status === 401) return location.replace('login.html?next=my.html');
+    $('msg').className = 'msg err'; $('msg').textContent = e.message; if (e.data) showChecks($('checks'), e.data);
+  }).then(function () { $('saveBtn').disabled = $('checkBtn').disabled = false; });
+}
+$('checkBtn').onclick = function () { run(true); }; $('saveBtn').onclick = function () { run(false); };
+$('outBtn').onclick = logout;
+
+$('copyBtn').onclick = function () {
+  var t = $('prompt').textContent;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { $('copied').textContent = '복사했어요!'; })
+    .catch(function () { var r = document.createRange(); r.selectNodeContents($('prompt')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copied').textContent = '글을 선택했어요. 복사(Ctrl+C)해 주세요'; });
+};
+
+$('pwForm').onsubmit = function (e) {
+  e.preventDefault(); $('pwMsg').className = 'msg'; $('pwMsg').textContent = '';
+  api('POST', '/api/auth/password', { current: $('pwCur').value, password: $('pwNew').value })
+    .then(function () { $('pwMsg').className = 'msg good'; $('pwMsg').textContent = '비밀번호를 바꿨어요'; $('pwCur').value = $('pwNew').value = ''; })
+    .catch(function (er) { $('pwMsg').className = 'msg err'; $('pwMsg').textContent = er.message; });
+};
+
+guard().then(function (u) {
+  user = u;
+  $('who').textContent = u.nickname + ' (' + u.username + ')';
+  $('nick').textContent = u.nickname;
+  if (u.role === 'admin') { $('policy').hidden = false; $('policy').innerHTML = '관리자 계정이에요. 앱 올리기·승인은 <a href="admin.html">관리 화면</a>에서 해요.'; }
+  return api('GET', '/api/auth/config');
+}).then(function (c) {
+  cfg = c;
+  $('subject').innerHTML = c.subjects.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
+  if (user.role !== 'admin') {
+    $('policy').hidden = false;
+    $('policy').textContent = c.autoPublish ? '올린 앱은 바로 갤러리에 나타나요. 앱은 ' + c.maxApps + '개까지 올릴 수 있어요.'
+      : '올린 앱은 선생님이 확인한 뒤 갤러리에 나타나요. 앱은 ' + c.maxApps + '개까지 올릴 수 있어요.';
+  }
+  resetForm(); return reload();
+}).catch(function (e) { $('msg').className = 'msg err'; $('msg').textContent = e.message; });
+</script>
+</body>
+</html>

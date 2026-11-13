@@ -1,0 +1,9 @@
+{
+  "name": "student-app-gallery",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  }
+}
