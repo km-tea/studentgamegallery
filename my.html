@@ -29,6 +29,15 @@
       <label>유형<select id="kind"></select></label>
     </div>
     <label>한 줄 설명<input id="description" maxlength="200" placeholder="어떤 앱인지 친구들에게 알려 주세요"></label>
+    <fieldset id="certBox" style="border:1.5px solid var(--line);border-radius:12px;padding:10px 14px 2px;margin:0 0 12px">
+      <legend style="padding:0 6px">🏅 수료 조건 <span class="hint">(게임만 · 비우면 수료증 없음)</span></legend>
+      <p class="hint" style="margin:0 0 8px">친구가 이 조건을 채우면 수료증을 받을 수 있어요. 게임에서 점수를 보고하는 코드(<code>GallerySDK.reportScore</code>)가 있어야 해요.</p>
+      <div class="grid">
+        <label>수료 기준 점수<input id="pass" type="number" min="1" max="1000000" step="1" inputmode="numeric" placeholder="예) 100"></label>
+        <label>최소 플레이 횟수<input id="minPlays" type="number" min="1" max="20" step="1" inputmode="numeric" value="1"></label>
+        <label>점수 단위<input id="unit" maxlength="8" value="점" placeholder="점, 챕터, 개 …"></label>
+      </div>
+    </fieldset>
     <div class="row">
       <button id="checkBtn" class="ghost">검사하기 (올리지 않음)</button>
       <button id="saveBtn">올리기</button>
@@ -36,7 +45,7 @@
     </div>
     <p id="msg" class="msg" role="status"></p>
     <ul id="checks" class="checks"></ul>
-    <p class="hint">별명은 '<span id="nick"></span>'(으)로 표시돼요. 수료증 기준 점수는 선생님이 정해 줘요.</p>
+    <p class="hint">별명은 '<span id="nick"></span>'(으)로 표시돼요. 수료 조건은 선생님이 확인하면서 고칠 수도 있어요.</p>
   </section>
 
   <div id="fbNotice" class="notice" hidden></div>
@@ -76,12 +85,15 @@ var editing = null, apps = [], cfg = {}, user = null, openCm = {};
 function resetForm() {
   editing = null; if ($('kind').options.length) $('kind').selectedIndex = 0; $('title').value = ''; $('description').value = ''; $('year').value = new Date().getFullYear();
   $('file').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = '';
+  $('pass').value = ''; $('minPlays').value = 1; $('unit').value = '점'; syncCert();
   $('resetBtn').hidden = true; $('checks').innerHTML = ''; $('msg').textContent = '';
 }
+function syncCert() { var g = $('kind').value === '게임'; $('certBox').hidden = !g; }
 function startEdit(a) {
   editing = a.id; $('title').value = a.title; $('year').value = a.year; $('description').value = a.description || '';
   if (cfg.subjects && cfg.subjects.indexOf(a.subject) < 0) { var o = document.createElement('option'); o.textContent = a.subject; $('subject').appendChild(o); }
   $('subject').value = a.subject; $('kind').value = a.kind || '게임'; $('file').value = '';
+  $('pass').value = a.pass_score || ''; $('minPlays').value = a.min_plays || 1; $('unit').value = a.unit || '점'; syncCert();
   $('formTitle').textContent = '앱 수정: ' + a.title; $('fileHint').textContent = '(새 파일을 고르지 않으면 정보만 수정돼요)';
   $('resetBtn').hidden = false; $('checks').innerHTML = ''; $('msg').textContent = '';
   var note = cfg.autoPublish ? '' : ' 고치면 선생님이 다시 확인해요.';
@@ -102,7 +114,8 @@ function renderList() {
     var wait = a.status === 'pending' ? '<div class="hint">선생님이 확인하면 갤러리에 나타나요.</div>' : '';
     var fb = (a.comment_count ? '💬 의견 ' + a.comment_count : '💬 의견') + (a.open_requests ? ' · 고칠 점 ' + a.open_requests : '');
     return '<article class="card"><h3>' + esc(a.title) + '</h3><div><span class="badge ' + esc(a.status) + '">' + esc(STATUS[a.status] || a.status) + '</span></div>'
-      + '<div class="hint">' + esc(a.year) + '년 · ' + esc(a.subject) + ' · ' + (KICON[a.kind] || '') + esc(a.kind || '게임') + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</div>' + note + wait
+      + '<div class="hint">' + esc(a.year) + '년 · ' + esc(a.subject) + ' · ' + (KICON[a.kind] || '') + esc(a.kind || '게임') + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</div>'
+      + '<div class="hint">🏅 ' + (a.pass_score ? '수료 조건: ' + esc(a.pass_score) + esc(a.unit || '점') + ' 이상 · ' + esc(a.min_plays || 1) + '회 이상 플레이' : '수료증 없음') + '</div>' + note + wait
       + '<div class="row"><a class="btn sm" href="play.html?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">해 보기</a>'
       + '<button class="ghost sm" data-act="edit" data-id="' + esc(a.id) + '">수정</button>'
       + '<button class="' + (a.open_requests ? '' : 'ghost ') + 'sm" data-act="cm" data-id="' + esc(a.id) + '">' + esc(fb) + '</button>'
@@ -129,7 +142,7 @@ $('list').onclick = function (e) {
 function payload(dry) {
   var f = $('file').files[0];
   return (f ? f.text() : Promise.resolve(null)).then(function (html) {
-    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, kind: $('kind').value, description: $('description').value, dryRun: !!dry };
+    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, kind: $('kind').value, description: $('description').value, pass: $('kind').value === '게임' ? $('pass').value : '', minPlays: $('minPlays').value, unit: $('unit').value, dryRun: !!dry };
     if (html !== null) p.html = html; return p;
   });
 }
@@ -144,7 +157,7 @@ function run(dry) {
     $('msg').textContent = d.status === 'published' ? (wasEditing ? '수정했어요!' : '올렸어요! 갤러리에 바로 나타나요.')
       : d.status === 'hidden' ? '수정했어요. (선생님이 숨겨 둔 앱이에요)'
       : '올렸어요! 선생님이 확인하면 갤러리에 나타나요.';
-    return reload().then(function () { editing = null; $('file').value = ''; $('title').value = ''; $('description').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = ''; $('resetBtn').hidden = true; });
+    return reload().then(function () { editing = null; $('file').value = ''; $('title').value = ''; $('description').value = ''; $('pass').value = ''; $('minPlays').value = 1; $('unit').value = '점'; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = ''; $('resetBtn').hidden = true; });
   }).catch(function (e) {
     if (e.status === 401) return location.replace('login.html?next=my.html');
     $('msg').className = 'msg err'; $('msg').textContent = e.message; if (e.data) showChecks($('checks'), e.data);
@@ -187,10 +200,10 @@ function drawIdeas() {
   $('ideaList').innerHTML = k.ideas.map(function (t) { return '<button type="button" class="ghost sm" data-idea="' + esc(t) + '">' + esc(t) + '</button>'; }).join('');
   $('prompt').textContent = buildPrompt();
 }
-$('ideaTabs').onclick = function (e) { var b = e.target.closest('[data-kind]'); if (!b) return; ideaKind = b.dataset.kind; if (!editing) $('kind').value = ideaKind; drawIdeas(); };
+$('ideaTabs').onclick = function (e) { var b = e.target.closest('[data-kind]'); if (!b) return; ideaKind = b.dataset.kind; if (!editing) { $('kind').value = ideaKind; syncCert(); } drawIdeas(); };
 $('ideaList').onclick = function (e) { var b = e.target.closest('[data-idea]'); if (!b) return; $('topic').value = b.dataset.idea; $('prompt').textContent = buildPrompt(); };
 $('topic').oninput = function () { $('prompt').textContent = buildPrompt(); };
-$('kind').onchange = function () { if (KIND_INFO[this.value]) { ideaKind = this.value; drawIdeas(); } };
+$('kind').onchange = function () { syncCert(); if (KIND_INFO[this.value]) { ideaKind = this.value; drawIdeas(); } };
 $('copyBtn').onclick = function () {
   var t = $('prompt').textContent;
   (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { $('copied').textContent = '복사했어요!'; })

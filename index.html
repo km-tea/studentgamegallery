@@ -41,6 +41,19 @@ header p{margin:0;color:var(--sub)}
 .btn.cmt{background:transparent}
 .btn.cert{background:var(--sun);border-color:var(--sun);color:#14213D;font-weight:700}
 .empty{color:var(--sub);padding:32px 0}
+.searchbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:16px 0 0}
+.searchbar input{flex:1;min-width:12em;max-width:420px;font:inherit;padding:9px 14px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink)}
+.searchbar input:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.searchbar button{font:inherit;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.searchbar button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.count{color:var(--sub);font-size:.92rem}
+.pager{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:0 0 56px}
+.pager button{font:inherit;min-width:40px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.pager button[aria-current=page]{background:var(--blue);border-color:var(--blue);color:var(--onblue);font-weight:700}
+.pager button:disabled{opacity:.45;cursor:default}
+.pager button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.pager .gap{color:var(--sub);padding:0 2px}
+.grid{padding-bottom:24px}
 </style>
 </head>
 <body>
@@ -50,12 +63,22 @@ header p{margin:0;color:var(--sub)}
   <p>친구들이 만든 앱을 해 보고, 기준 점수를 넘기면 수료증을 받아요.</p>
 </header>
 <main>
+  <form class="searchbar" id="searchForm" role="search" onsubmit="return false">
+    <input id="q" type="search" placeholder="🔍 앱 이름·설명·만든 친구로 검색" aria-label="앱 검색" autocomplete="off" maxlength="40">
+    <button type="button" id="qClear" hidden>지우기</button>
+    <span class="count" id="count" role="status" aria-live="polite"></span>
+  </form>
   <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
+  <nav class="pager" id="pager" aria-label="목록 쪽 이동"></nav>
 </main>
 <script src="gallery-sdk.js"></script>
 <script>
-var apps=[],sel={year:'',subject:''};
+var apps=[],sel={year:'',subject:'',kind:'',q:''},page=1,PER=9;
+var pager=document.getElementById('pager'),qBox=document.getElementById('q'),qClear=document.getElementById('qClear'),countEl=document.getElementById('count');
+var SKEY='gallery-list-v1';
+function saveState(){try{sessionStorage.setItem(SKEY,JSON.stringify({sel:sel,page:page}))}catch(e){}}
+function loadState(){try{var d=JSON.parse(sessionStorage.getItem(SKEY));if(d&&d.sel){sel={year:d.sel.year||'',subject:d.sel.subject||'',kind:d.sel.kind||'',q:d.sel.q||''};page=Math.max(1,parseInt(d.page,10)||1)}}catch(e){}qBox.value=sel.q;qClear.hidden=!sel.q}
 var grid=document.getElementById('grid'),filters=document.getElementById('filters');
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var ICON={'게임':'🎮','퀴즈':'❓','학습':'📚','만들기':'🎨','이야기':'📖','기타':'✨'};
@@ -67,15 +90,63 @@ function chips(){
     ['전체'].concat(uniq(g[0])).forEach(function(v){
       var b=document.createElement('button');b.className='chip';b.textContent=v==='전체'?'전체':(g[0]==='year'?v+'년':g[0]==='kind'?(ICON[v]||'')+' '+v:v);
       b.setAttribute('aria-pressed',String((v==='전체'&&!sel[g[0]])||String(sel[g[0]])===String(v)));
-      b.onclick=function(){sel[g[0]]=v==='전체'?'':v;chips();render()};
+      b.onclick=function(){sel[g[0]]=v==='전체'?'':v;page=1;chips();render()};
       box.appendChild(b);
     });
     filters.appendChild(box);
   });
 }
+function matches(a){
+  if(sel.year&&String(a.year)!==String(sel.year))return false;
+  if(sel.subject&&a.subject!==sel.subject)return false;
+  if(sel.kind&&a.kind!==sel.kind)return false;
+  var terms=sel.q.toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length)return true;
+  var hay=[a.title,a.description,a.maker,a.subject,a.kind,a.year+'년'].join(' ').toLowerCase();
+  return terms.every(function(t){return hay.indexOf(t)>=0});
+}
+function pageList(cur,total){
+  var out=[],i;
+  if(total<=7){for(i=1;i<=total;i++)out.push(i);return out}
+  out.push(1);
+  var lo=Math.max(2,cur-1),hi=Math.min(total-1,cur+1);
+  if(lo>2)out.push('…');
+  for(i=lo;i<=hi;i++)out.push(i);
+  if(hi<total-1)out.push('…');
+  out.push(total);return out;
+}
+function drawPager(total){
+  var pages=Math.max(1,Math.ceil(total/PER));
+  if(pages<=1){pager.innerHTML='';return}
+  var h='<button type="button" data-p="'+(page-1)+'"'+(page<=1?' disabled':'')+' aria-label="이전 쪽">◀ 이전</button>';
+  pageList(page,pages).forEach(function(n){
+    h+=n==='…'?'<span class="gap" aria-hidden="true">…</span>':'<button type="button" data-p="'+n+'"'+(n===page?' aria-current="page"':'')+' aria-label="'+n+'쪽">'+n+'</button>';
+  });
+  h+='<button type="button" data-p="'+(page+1)+'"'+(page>=pages?' disabled':'')+' aria-label="다음 쪽">다음 ▶</button>';
+  pager.innerHTML=h;
+}
+pager.onclick=function(e){
+  var b=e.target.closest('button[data-p]');if(!b||b.disabled)return;
+  page=parseInt(b.dataset.p,10)||1;render();
+  var top=document.querySelector('.searchbar');if(top)top.scrollIntoView({behavior:'smooth',block:'start'});
+};
+var qTimer;
+qBox.addEventListener('input',function(){
+  clearTimeout(qTimer);
+  qTimer=setTimeout(function(){sel.q=qBox.value.trim();page=1;render()},150);
+  qClear.hidden=!qBox.value;
+});
+qBox.addEventListener('keydown',function(e){if(e.key==='Escape'&&qBox.value){qBox.value='';sel.q='';page=1;qClear.hidden=true;render()}});
+qClear.onclick=function(){qBox.value='';sel.q='';page=1;qClear.hidden=true;render();qBox.focus()};
 function render(){
-  var list=apps.filter(function(a){return(!sel.year||String(a.year)===String(sel.year))&&(!sel.subject||a.subject===sel.subject)&&(!sel.kind||a.kind===sel.kind)});
-  if(!list.length){grid.innerHTML='<p class="empty">이 조건에 맞는 앱이 아직 없어요.</p>';return}
+  var list=apps.filter(matches);
+  var pages=Math.max(1,Math.ceil(list.length/PER));
+  if(page>pages)page=pages;if(page<1)page=1;
+  saveState();
+  countEl.textContent=apps.length?('전체 '+apps.length+'개 중 '+list.length+'개'+(list.length>PER?' · '+page+'/'+pages+'쪽':'')):'';
+  if(!list.length){grid.innerHTML='<p class="empty">'+(sel.q?'「'+esc(sel.q)+'」에 맞는 앱이 없어요. 다른 말로 검색해 보세요.':'이 조건에 맞는 앱이 아직 없어요.')+'</p>';pager.innerHTML='';return}
+  list=list.slice((page-1)*PER,page*PER);
+  drawPager(apps.filter(matches).length);
   grid.innerHTML=list.map(function(a){
     var s=a.scoring,p=GallerySDK.getProgress(a.id),best=p?p.best:0,plays=p?p.plays:0,ok=GallerySDK.isPassed(a);
     var pct=s?Math.min(100,Math.round(best/s.pass*100)):0;
@@ -93,7 +164,7 @@ fetch('/api/auth/me',{credentials:'same-origin'}).then(function(r){return r.ok?r
 window.addEventListener('pageshow',function(e){if(e.persisted&&apps.length)render()});
 // 폴더로 올린 앱(apps.json)과 관리 화면으로 올린 앱(/api/apps)을 합쳐서 보여 줘요
 function loadJson(u){return fetch(u).then(function(r){return r.ok?r.json():[]}).catch(function(){return[]})}
-Promise.all([loadJson('apps.json'),loadJson('/api/apps')]).then(function(r){apps=r[0].concat(r[1]);apps.forEach(function(a){if(!a.kind)a.kind='게임'});if(!apps.length)throw 0;chips();render()})
+Promise.all([loadJson('apps.json'),loadJson('/api/apps')]).then(function(r){apps=r[0].concat(r[1]);apps.forEach(function(a){if(!a.kind)a.kind='게임'});if(!apps.length)throw 0;loadState();chips();render()})
 .catch(function(){grid.innerHTML='<p class="empty">apps.json을 불러오지 못했어요. 파일 위치와 형식을 확인해 주세요. (파일을 그냥 열면 안 되고, Netlify나 로컬 서버에서 열어야 해요.)</p>'});
 </script>
 </body>
