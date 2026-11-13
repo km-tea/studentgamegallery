@@ -38,6 +38,7 @@ header p{margin:0;color:var(--sub)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
 .btn{display:inline-block;border-radius:10px;padding:7px 16px;text-decoration:none;font:inherit;border:1.5px solid var(--blue);color:var(--blue)}
 .btn.play{background:var(--blue);color:var(--onblue)}
+.btn.cmt{background:transparent}
 .btn.cert{background:var(--sun);border-color:var(--sun);color:#14213D;font-weight:700}
 .empty{color:var(--sub);padding:32px 0}
 </style>
@@ -81,7 +82,7 @@ function render(){
     var stamp=s?'<div class="stamp'+(ok?' done':'')+'">'+(ok?'수료':'도전')+'</div>':'';
     var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+(s.unit||'점')+' · '+plays+'회 플레이<br>수료 조건: '+s.pass+(s.unit||'점')+' 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
     var cert=s?(ok?'<a class="btn cert" href="certificate.html?id='+encodeURIComponent(a.id)+'">수료증 받기</a>':''):'';
-    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+' · '+(ICON[a.kind]||'')+esc(a.kind)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path||('play.html?id='+encodeURIComponent(a.id)))+'">플레이</a>'+cert+'</div></article>';
+    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+' · '+(ICON[a.kind]||'')+esc(a.kind)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path||('play.html?id='+encodeURIComponent(a.id)))+'">플레이</a>'+'<a class="btn cmt" href="'+(a.path?'feedback.html?id=':'play.html?c=1&id=')+encodeURIComponent(a.id)+'" title="이 앱에 의견·수정 요청 남기기">💬 의견</a>'+cert+'</div></article>';
   }).join('');
 }
 // 로그인 상태에 따라 오른쪽 위 메뉴를 바꿔요 (실패해도 갤러리는 그대로 보여요)

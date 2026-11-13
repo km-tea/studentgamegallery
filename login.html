@@ -63,7 +63,7 @@ if (q.get('role') === 'teacher') {
 // 로그인 뒤 돌아갈 곳: 같은 사이트 안의 .html 주소만 허용
 function nextUrl(user) {
   var n = new URLSearchParams(location.search).get('next');
-  if (n && /^[a-z0-9_-]+\.html(\?id=[A-Za-z0-9_.-]+)?$/i.test(n) && (n !== 'admin.html' || user.role === 'admin')) return n;
+  if (n && /^[a-z0-9_-]+\.html(\?(c=1&)?id=[A-Za-z0-9_.-]+(&c=1)?)?$/i.test(n) && (n !== 'admin.html' || user.role === 'admin')) return n;
   return user.role === 'admin' ? 'admin.html' : 'my.html';
 }
 function tab(which) {

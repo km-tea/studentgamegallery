@@ -16,9 +16,25 @@ export default async (req, context) => {
 
 const MAX_PER_APP = 10; // 한 사람이 앱 하나에 남길 수 있는 댓글 수
 
-async function loadApp(db, id, user) {
+// apps.json(폴더로 올린 앱)에 있는 앱도 댓글을 받을 수 있게, 목록을 잠깐 기억해 두고 확인한다
+let folderCache = { at: 0, ids: new Set() };
+async function folderAppExists(req, id) {
+  if (Date.now() - folderCache.at > 60000) {
+    try {
+      const r = await fetch(new URL('/apps.json', req.url));
+      folderCache = { at: Date.now(), ids: new Set(r.ok ? (await r.json()).map((a) => a.id) : []) };
+    } catch { /* 못 읽으면 폴더 앱은 없는 것으로 */ }
+  }
+  return folderCache.ids.has(id);
+}
+
+async function loadApp(db, id, user, req) {
   const a = (await db`SELECT id, status, owner_id FROM apps WHERE id = ${String(id || '')}`)[0];
-  if (!a) return null;
+  if (!a) {
+    // 폴더 앱: 항상 공개 상태이고 제작자 계정은 없다 (반영 표시는 교사만)
+    if (id && await folderAppExists(req, String(id))) return { id: String(id), status: 'published', owner_id: null, isOwner: false, isAdmin: user.role === 'admin' };
+    return null;
+  }
   const owner = !!a.owner_id && a.owner_id === user.id;
   if (a.status !== 'published' && !owner && user.role !== 'admin') return null; // 볼 수 없는 앱은 "없다"고 답한다
   return { ...a, isOwner: owner, isAdmin: user.role === 'admin' };
@@ -33,7 +49,7 @@ export async function handle(req, context, getDb) {
   const id = context?.params?.id || (m ? decodeURIComponent(m[1]) : null);
 
   if (req.method === 'GET' && !id) {
-    const app = await loadApp(db, url.searchParams.get('app'), user);
+    const app = await loadApp(db, url.searchParams.get('app'), user, req);
     if (!app) return json({ error: '앱을 찾을 수 없어요' }, 404);
     const rows = await db`SELECT c.id, c.author_id, c.author_name, c.kind, c.body, c.resolved, c.created_at, u.role AS author_role
       FROM comments c LEFT JOIN users u ON u.id = c.author_id WHERE c.app_id = ${app.id} ORDER BY c.created_at ASC`;
@@ -50,7 +66,7 @@ export async function handle(req, context, getDb) {
   if (req.method === 'POST' && !id) {
     let b;
     try { b = await req.json(); } catch { return json({ error: '요청 형식이 올바르지 않아요' }, 400); }
-    const app = await loadApp(db, b.app, user);
+    const app = await loadApp(db, b.app, user, req);
     if (!app) return json({ error: '앱을 찾을 수 없어요' }, 404);
     const body = String(b.body || '').trim().slice(0, 300);
     if (body.length < 2) return json({ error: '내용을 두 글자 이상 써 주세요' }, 400);
@@ -66,7 +82,7 @@ export async function handle(req, context, getDb) {
   }
 
   if (id) {
-    const c = (await db`SELECT c.id, c.author_id, c.kind, a.owner_id FROM comments c JOIN apps a ON a.id = c.app_id WHERE c.id = ${id}`)[0];
+    const c = (await db`SELECT c.id, c.author_id, c.kind, a.owner_id FROM comments c LEFT JOIN apps a ON a.id = c.app_id WHERE c.id = ${id}`)[0];
     if (!c) return json({ error: '댓글을 찾지 못했어요' }, 404);
     const isAdmin = user.role === 'admin';
     if (req.method === 'DELETE') {

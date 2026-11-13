@@ -50,13 +50,14 @@ fetch('/api/apps/'+encodeURIComponent(id||''),{credentials:'same-origin'}).then(
   if(!app){document.getElementById('title').textContent='앱을 찾을 수 없어요';return}
   document.title=app.title;document.getElementById('title').textContent=app.title+(app.status&&app.status!=='published'?' (공개 전 미리보기)':'');showStat();
   document.getElementById('cmBtn').hidden=false;
+  if(new URLSearchParams(location.search).get('c')==='1')cmToggle(true);
   frame.src='/api/play/'+encodeURIComponent(id);
 });
 // 의견·수정 요청 창 (처음 열 때 불러와요)
 var cmBtn=document.getElementById('cmBtn'),cmPanel=document.getElementById('cmPanel'),cmLoaded=false;
 function cmToggle(open){
   cmPanel.classList.toggle('open',open);cmBtn.setAttribute('aria-expanded',String(open));
-  if(open&&!cmLoaded){cmLoaded=true;Comments.mount(document.getElementById('cmBody'),{appId:id,loginUrl:'login.html?next='+encodeURIComponent('play.html?id='+id)})}
+  if(open&&!cmLoaded){cmLoaded=true;Comments.mount(document.getElementById('cmBody'),{appId:id,loginUrl:'login.html?next='+encodeURIComponent('play.html?id='+id+'&c=1')})}
 }
 cmBtn.onclick=function(){cmToggle(!cmPanel.classList.contains('open'))};
 document.getElementById('cmClose').onclick=function(){cmToggle(false);cmBtn.focus()};

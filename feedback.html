@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>의견 남기기 · 우리 반 웹앱 갤러리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>main{max-width:640px}</style>
+</head>
+<body>
+<main>
+  <p><a href="./">← 갤러리로 돌아가기</a></p>
+  <h1 id="title">의견 남기기</h1>
+  <p class="sub" id="meta"></p>
+  <div class="row" style="margin-bottom:16px"><a class="btn" id="playBtn" href="./" hidden>플레이 하러 가기</a></div>
+  <section class="card"><h2>💬 의견 · 수정 요청</h2><div id="cm"></div></section>
+</main>
+<script src="site.js"></script>
+<script src="comments.js"></script>
+<script>
+var id = new URLSearchParams(location.search).get('id');
+function find() {
+  // 폴더로 올린 앱(apps.json)과 관리 화면·학생이 올린 앱(/api/apps) 모두에서 찾아요
+  return fetch('apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }).then(function (list) {
+    var a = list.filter(function (x) { return x.id === id; })[0]; if (a) return a;
+    return fetch('/api/apps/' + encodeURIComponent(id || ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  });
+}
+find().then(function (a) {
+  if (!a || !a.id) { $('title').textContent = '앱을 찾을 수 없어요'; return; }
+  document.title = a.title + ' · 의견'; $('title').textContent = a.title;
+  $('meta').textContent = a.year + '년 · ' + a.subject + (a.maker ? ' · 만든 친구: ' + a.maker : '');
+  $('playBtn').href = a.path || ('play.html?id=' + encodeURIComponent(a.id)); $('playBtn').hidden = false;
+  Comments.mount($('cm'), { appId: a.id, loginUrl: 'login.html?next=' + encodeURIComponent('feedback.html?id=' + a.id) });
+});
+</script>
+</body>
+</html>
