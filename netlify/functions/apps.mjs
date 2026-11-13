@@ -15,7 +15,7 @@ export default async (req, context) => {
 };
 
 const shape = (r) => ({
-  id: r.id, title: r.title, year: r.year, subject: r.subject, maker: r.maker, description: r.description,
+  id: r.id, title: r.title, year: r.year, subject: r.subject, kind: r.kind, maker: r.maker, description: r.description,
   ...(r.pass_score ? { scoring: { pass: r.pass_score, minPlays: r.min_plays, unit: r.unit } } : {}),
 });
 
@@ -26,7 +26,7 @@ export async function handle(req, context, getDb) {
   const id = context?.params?.id || (m ? decodeURIComponent(m[1]) : null);
 
   if (id) {
-    const r = (await db`SELECT id, title, year, subject, maker, description, pass_score, min_plays, unit, status, owner_id
+    const r = (await db`SELECT id, title, year, subject, kind, maker, description, pass_score, min_plays, unit, status, owner_id
       FROM apps WHERE id = ${id}`)[0];
     if (!r) return json({ error: '앱을 찾을 수 없어요' }, 404);
     if (r.status !== 'published') {
@@ -36,7 +36,7 @@ export async function handle(req, context, getDb) {
     return json({ ...shape(r), status: r.status });
   }
 
-  const rows = await db`SELECT id, title, year, subject, maker, description, pass_score, min_plays, unit
+  const rows = await db`SELECT id, title, year, subject, kind, maker, description, pass_score, min_plays, unit
     FROM apps WHERE status = 'published' ORDER BY year DESC, created_at DESC`;
   return json(rows.map(shape));
 }

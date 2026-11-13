@@ -57,13 +57,14 @@ header p{margin:0;color:var(--sub)}
 var apps=[],sel={year:'',subject:''};
 var grid=document.getElementById('grid'),filters=document.getElementById('filters');
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var ICON={'게임':'🎮','퀴즈':'❓','학습':'📚','만들기':'🎨','이야기':'📖','기타':'✨'};
 function uniq(k){var v=[];apps.forEach(function(a){if(v.indexOf(a[k])<0)v.push(a[k])});return v.sort(function(x,y){return k==='year'?y-x:String(x).localeCompare(String(y),'ko')})}
 function chips(){
   filters.innerHTML='';
-  [['year','연도'],['subject','주제']].forEach(function(g){
+  [['year','연도'],['subject','주제'],['kind','유형']].forEach(function(g){
     var box=document.createElement('div');box.className='group';box.innerHTML='<b>'+g[1]+'</b>';
     ['전체'].concat(uniq(g[0])).forEach(function(v){
-      var b=document.createElement('button');b.className='chip';b.textContent=v==='전체'?'전체':(g[0]==='year'?v+'년':v);
+      var b=document.createElement('button');b.className='chip';b.textContent=v==='전체'?'전체':(g[0]==='year'?v+'년':g[0]==='kind'?(ICON[v]||'')+' '+v:v);
       b.setAttribute('aria-pressed',String((v==='전체'&&!sel[g[0]])||String(sel[g[0]])===String(v)));
       b.onclick=function(){sel[g[0]]=v==='전체'?'':v;chips();render()};
       box.appendChild(b);
@@ -72,7 +73,7 @@ function chips(){
   });
 }
 function render(){
-  var list=apps.filter(function(a){return(!sel.year||String(a.year)===String(sel.year))&&(!sel.subject||a.subject===sel.subject)});
+  var list=apps.filter(function(a){return(!sel.year||String(a.year)===String(sel.year))&&(!sel.subject||a.subject===sel.subject)&&(!sel.kind||a.kind===sel.kind)});
   if(!list.length){grid.innerHTML='<p class="empty">이 조건에 맞는 앱이 아직 없어요.</p>';return}
   grid.innerHTML=list.map(function(a){
     var s=a.scoring,p=GallerySDK.getProgress(a.id),best=p?p.best:0,plays=p?p.plays:0,ok=GallerySDK.isPassed(a);
@@ -80,7 +81,7 @@ function render(){
     var stamp=s?'<div class="stamp'+(ok?' done':'')+'">'+(ok?'수료':'도전')+'</div>':'';
     var prog=s?'<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="prog">내 최고 '+best+(s.unit||'점')+' · '+plays+'회 플레이<br>수료 조건: '+s.pass+(s.unit||'점')+' 이상, '+(s.minPlays||1)+'회 이상 플레이</div>':'';
     var cert=s?(ok?'<a class="btn cert" href="certificate.html?id='+encodeURIComponent(a.id)+'">수료증 받기</a>':''):'';
-    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path||('play.html?id='+encodeURIComponent(a.id)))+'">플레이</a>'+cert+'</div></article>';
+    return '<article class="card">'+stamp+'<h2>'+esc(a.title)+'</h2><div class="tag">'+esc(a.year)+'년 · '+esc(a.subject)+' · '+(ICON[a.kind]||'')+esc(a.kind)+(a.maker?' · 만든 친구: '+esc(a.maker):'')+'</div><p class="desc">'+esc(a.description)+'</p>'+prog+'<div class="actions"><a class="btn play" href="'+esc(a.path||('play.html?id='+encodeURIComponent(a.id)))+'">플레이</a>'+cert+'</div></article>';
   }).join('');
 }
 // 로그인 상태에 따라 오른쪽 위 메뉴를 바꿔요 (실패해도 갤러리는 그대로 보여요)
@@ -91,7 +92,7 @@ fetch('/api/auth/me',{credentials:'same-origin'}).then(function(r){return r.ok?r
 window.addEventListener('pageshow',function(e){if(e.persisted&&apps.length)render()});
 // 폴더로 올린 앱(apps.json)과 관리 화면으로 올린 앱(/api/apps)을 합쳐서 보여 줘요
 function loadJson(u){return fetch(u).then(function(r){return r.ok?r.json():[]}).catch(function(){return[]})}
-Promise.all([loadJson('apps.json'),loadJson('/api/apps')]).then(function(r){apps=r[0].concat(r[1]);if(!apps.length)throw 0;chips();render()})
+Promise.all([loadJson('apps.json'),loadJson('/api/apps')]).then(function(r){apps=r[0].concat(r[1]);apps.forEach(function(a){if(!a.kind)a.kind='게임'});if(!apps.length)throw 0;chips();render()})
 .catch(function(){grid.innerHTML='<p class="empty">apps.json을 불러오지 못했어요. 파일 위치와 형식을 확인해 주세요. (파일을 그냥 열면 안 되고, Netlify나 로컬 서버에서 열어야 해요.)</p>'});
 </script>
 </body>

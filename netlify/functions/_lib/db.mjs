@@ -54,6 +54,19 @@ export async function migrate(db) {
   await db`ALTER TABLE apps ADD COLUMN IF NOT EXISTS owner_id TEXT`;
   await db`ALTER TABLE apps ADD COLUMN IF NOT EXISTS review_note TEXT NOT NULL DEFAULT ''`;
   await db`CREATE INDEX IF NOT EXISTS apps_owner_idx ON apps (owner_id)`;
+  // 3단계: 앱 유형(게임·퀴즈·학습…)과 댓글(피드백)
+  await db`ALTER TABLE apps ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '게임'`;
+  await db`CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    app_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'request',
+    body TEXT NOT NULL,
+    resolved BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`;
+  await db`CREATE INDEX IF NOT EXISTS comments_app_idx ON comments (app_id, created_at)`;
 
   await db`CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -86,6 +99,10 @@ export async function migrate(db) {
       ON CONFLICT (username) DO NOTHING`;
   }
 }
+
+// ---- 앱 유형 / 댓글 종류 ----
+export const KINDS = ['게임', '퀴즈', '학습', '만들기', '이야기', '기타'];
+export const COMMENT_KINDS = { request: '수정 요청', question: '질문', cheer: '칭찬·응원', reply: '제작자 답글' };
 
 // ---- 설정값 ----
 export const SETTING_DEFAULTS = {

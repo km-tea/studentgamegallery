@@ -1,7 +1,7 @@
 // 앱 올리기/수정 공통 처리 (교사·학생 둘 다 이 함수를 쓴다)
 // 학생: 이름·주제·연도·설명만 정할 수 있고, 수료 기준은 교사가 정한다. 공개 여부는 교사 승인 설정을 따른다.
 import { randomBytes } from 'node:crypto';
-import { json, subjectList } from './db.mjs';
+import { json, subjectList, KINDS } from './db.mjs';
 import { inspect, transform, MAX_BYTES } from './transform.mjs';
 
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
@@ -12,7 +12,9 @@ function cleanMeta(b, admin, subjects) {
   if (!subject) return { error: '주제를 선택해 주세요' };
   if (!admin && !subjects.includes(subject)) return { error: '목록에 있는 주제를 골라 주세요' };
   if (!(year >= 2000 && year <= 2100)) return { error: '연도를 확인해 주세요' };
-  const meta = { title, subject, year, description: clip(b.description, 200) };
+  const kind = clip(b.kind, 10) || '게임';
+  if (!KINDS.includes(kind)) return { error: '앱 유형을 목록에서 골라 주세요' };
+  const meta = { title, subject, year, kind, description: clip(b.description, 200) };
   if (admin) {
     const pass = b.pass === '' || b.pass == null ? null : parseInt(b.pass, 10);
     if (pass !== null && !(pass >= 1)) return { error: '기준 점수는 1 이상의 숫자로 입력해 주세요' };
@@ -46,7 +48,7 @@ export async function saveApp({ db, body: b, user, settings }) {
   const appId = existing ? existing.id : `${meta.year}-${randomBytes(3).toString('hex')}`;
   let finalHtml, stored;
   if (html) {
-    const insp = inspect(html);
+    const insp = inspect(html, { kind: meta.kind });
     if (insp.blocked) return json({ error: insp.checks.find((c) => c.level === 'error').text, checks: insp.checks }, 400);
     const t = transform(html, appId);
     finalHtml = t.html;
@@ -65,20 +67,20 @@ export async function saveApp({ db, body: b, user, settings }) {
   else status = settings.auto_publish === '1' ? 'published' : 'pending';
 
   if (existing && admin) {
-    await db`UPDATE apps SET title = ${meta.title}, year = ${meta.year}, subject = ${meta.subject}, maker = ${meta.maker},
+    await db`UPDATE apps SET title = ${meta.title}, year = ${meta.year}, subject = ${meta.subject}, kind = ${meta.kind}, maker = ${meta.maker},
       description = ${meta.description}, pass_score = ${meta.pass}, min_plays = ${meta.minPlays}, unit = ${meta.unit},
       html = ${finalHtml}, checks = ${checksJson}::jsonb, updated_at = now() WHERE id = ${appId}`;
   } else if (existing) {
-    await db`UPDATE apps SET title = ${meta.title}, year = ${meta.year}, subject = ${meta.subject},
+    await db`UPDATE apps SET title = ${meta.title}, year = ${meta.year}, subject = ${meta.subject}, kind = ${meta.kind},
       description = ${meta.description}, html = ${finalHtml}, checks = ${checksJson}::jsonb,
       status = ${status}, review_note = '', updated_at = now() WHERE id = ${appId}`;
   } else if (admin) {
-    await db`INSERT INTO apps (id, title, year, subject, maker, description, pass_score, min_plays, unit, html, checks, status)
-      VALUES (${appId}, ${meta.title}, ${meta.year}, ${meta.subject}, ${meta.maker}, ${meta.description}, ${meta.pass},
+    await db`INSERT INTO apps (id, title, year, subject, kind, maker, description, pass_score, min_plays, unit, html, checks, status)
+      VALUES (${appId}, ${meta.title}, ${meta.year}, ${meta.subject}, ${meta.kind}, ${meta.maker}, ${meta.description}, ${meta.pass},
       ${meta.minPlays}, ${meta.unit}, ${finalHtml}, ${checksJson}::jsonb, 'published')`;
   } else {
-    await db`INSERT INTO apps (id, title, year, subject, maker, description, html, checks, status, owner, owner_id)
-      VALUES (${appId}, ${meta.title}, ${meta.year}, ${meta.subject}, ${user.nickname}, ${meta.description},
+    await db`INSERT INTO apps (id, title, year, subject, kind, maker, description, html, checks, status, owner, owner_id)
+      VALUES (${appId}, ${meta.title}, ${meta.year}, ${meta.subject}, ${meta.kind}, ${user.nickname}, ${meta.description},
       ${finalHtml}, ${checksJson}::jsonb, ${status}, 'student', ${user.id})`;
   }
   return json({ ok: true, id: appId, status, ...stored });

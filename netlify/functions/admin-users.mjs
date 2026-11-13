@@ -1,7 +1,7 @@
 // 교사 전용: 학생 계정 관리(목록·직접 만들기·비밀번호 초기화·사용 중지·삭제) + 갤러리 설정
 import { getSql, json, getSettings, SETTING_DEFAULTS } from './_lib/db.mjs';
 import { requireUser, cleanEmail } from './_lib/auth.mjs';
-import { hashPassword, randomId } from './_lib/crypto.mjs';
+import { hashPassword, randomId, randomPassword } from './_lib/crypto.mjs';
 
 export const config = { path: ['/api/admin/users', '/api/admin/users/:id', '/api/admin/settings'] };
 
@@ -64,6 +64,33 @@ export async function handle(req, context, getDb) {
     return json(rows);
   }
 
+  // 엑셀로 한꺼번에 가입: 화면에서 30명씩 나눠 보낸다 (함수 실행 시간 제한을 넘지 않도록)
+  if (req.method === 'POST' && url.pathname.endsWith('/api/admin/users/bulk')) {
+    let b;
+    try { b = await req.json(); } catch { return json({ error: '요청 형식이 올바르지 않아요' }, 400); }
+    const list = Array.isArray(b.users) ? b.users : [];
+    if (!list.length) return json({ error: '가입시킬 학생이 없어요' }, 400);
+    if (list.length > 30) return json({ error: '한 번에 30명까지만 처리할 수 있어요' }, 400);
+    const results = [];
+    for (const r of list) {
+      const email = cleanEmail(r.email);
+      const nickname = String(r.nickname || '').trim().slice(0, 12) || '학생';
+      const given = String(r.password ?? '').trim();
+      const password = given || randomPassword();
+      const out = { email: String(r.email ?? '').trim(), nickname };
+      if (!email) results.push({ ...out, status: 'error', error: '이메일 형식이 올바르지 않아요' });
+      else if (password.length < 6 || password.length > 72) results.push({ ...out, status: 'error', error: '비밀번호는 6자 이상이어야 해요' });
+      else {
+        const ins = await db`INSERT INTO users (id, username, nickname, pw_hash, role)
+          VALUES (${randomId('u')}, ${email}, ${nickname}, ${hashPassword(password)}, 'student')
+          ON CONFLICT (username) DO NOTHING RETURNING id`;
+        if (!ins.length) results.push({ ...out, email, status: 'exists', error: '이미 가입된 이메일이에요' });
+        else results.push({ ...out, email, status: 'created', password });
+      }
+    }
+    return json({ results, created: results.filter((x) => x.status === 'created').length });
+  }
+
   if (req.method === 'POST' && !id) {
     let b;
     try { b = await req.json(); } catch { return json({ error: '요청 형식이 올바르지 않아요' }, 400); }
@@ -87,8 +114,12 @@ export async function handle(req, context, getDb) {
 
   if (req.method === 'DELETE') {
     // 기본: 앱은 남기고(교사 소유로) 계정만 삭제. ?apps=delete 면 앱도 함께 삭제
-    if (url.searchParams.get('apps') === 'delete') await db`DELETE FROM apps WHERE owner_id = ${id}`;
+    if (url.searchParams.get('apps') === 'delete') {
+      await db`DELETE FROM comments WHERE app_id IN (SELECT id FROM apps WHERE owner_id = ${id})`;
+      await db`DELETE FROM apps WHERE owner_id = ${id}`;
+    }
     else await db`UPDATE apps SET owner_id = NULL, owner = 'teacher' WHERE owner_id = ${id}`;
+    await db`DELETE FROM comments WHERE author_id = ${id}`;
     await db`DELETE FROM users WHERE id = ${id}`;
     return json({ ok: true });
   }

@@ -50,6 +50,11 @@ export function verifyToken(token, secret) {
 export const sha = (s) => createHash('sha256').update(String(s)).digest();
 export const safeEqual = (a, b) => timingSafeEqual(sha(a), sha(b));
 export const randomId = (prefix) => `${prefix}_${randomBytes(6).toString('hex')}`;
+// 일괄 가입 때 비밀번호를 비워 두면 서버가 만들어 주는 8자 임시 비밀번호 (헷갈리는 글자 제외)
+export function randomPassword(len = 8) {
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from(randomBytes(len), (x) => abc[x % abc.length]).join('');
+}
 // 헷갈리는 글자(0/O, 1/I)를 뺀 가입 코드
 export function randomCode(len = 6) {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

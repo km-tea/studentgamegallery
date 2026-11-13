@@ -13,14 +13,24 @@ html,body{height:100%;margin:0;background:#10172A;color:#EEF2FB;font-family:'Not
 #cert{display:none;background:#FFC83D;color:#14213D!important;border-radius:8px;padding:3px 10px;font-weight:700}
 #toast{position:fixed;left:50%;top:52px;transform:translateX(-50%);background:#FFC83D;color:#14213D;padding:8px 16px;border-radius:10px;display:none;z-index:5}
 iframe{display:block;width:100%;border:0;background:#fff}
+#cmBtn{background:transparent;border:1.5px solid #FFD66B;color:#FFD66B;border-radius:8px;padding:2px 10px;font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
+#cmBtn:focus-visible,#cmClose:focus-visible{outline:3px solid #FFC83D;outline-offset:2px}
+#cmPanel{position:fixed;top:44px;right:0;bottom:0;width:min(440px,100vw);background:#1A2440;border-left:1.5px solid #2D3A5E;z-index:6;display:none;flex-direction:column;
+  --ink:#EEF2FB;--sub:#9AA6C4;--line:#2D3A5E;--card:#121B33;--field:#10172A;--blue:#8FB0FF;--onblue:#10172A;--track:#2D3A5E;--okbg:#17382A;--ok:#7FD9A4;--warnbg:#3B3114;--warn:#FFD66B;--redbg:#40201D;--red:#FF8F82}
+#cmPanel.open{display:flex}
+#cmHead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1.5px solid #2D3A5E;font-weight:700}
+#cmClose{background:transparent;border:0;color:#EEF2FB;font-size:1.4rem;cursor:pointer;line-height:1}
+#cmBody{overflow:auto;padding:14px;flex:1}
 </style>
 </head>
 <body>
-<div id="bar"><a href="./">← 갤러리</a><span id="title"></span><span id="stat"></span><a id="cert" href="#">수료증 받기</a></div>
+<div id="bar"><a href="./">← 갤러리</a><span id="title"></span><span id="stat"></span><a id="cert" href="#">수료증 받기</a><button id="cmBtn" type="button" aria-expanded="false" aria-controls="cmPanel" hidden>💬 의견</button></div>
+<aside id="cmPanel" aria-label="의견과 수정 요청"><div id="cmHead"><span>💬 의견 · 수정 요청</span><button id="cmClose" type="button" aria-label="닫기">×</button></div><div id="cmBody"></div></aside>
 <div id="toast" role="status"></div>
 <!-- 게임은 sandbox(격리) 상태로 실행돼요: 이 사이트의 저장 기록·서버에 접근할 수 없어요 -->
 <iframe id="game" title="게임" sandbox="allow-scripts allow-popups allow-pointer-lock" allow="autoplay; fullscreen"></iframe>
 <script src="gallery-sdk.js"></script>
+<script src="comments.js"></script>
 <script>
 var id=new URLSearchParams(location.search).get('id'),app=null,frame=document.getElementById('game');
 function fit(){frame.style.height=Math.max(200,innerHeight-44)+'px'}
@@ -28,6 +38,7 @@ addEventListener('resize',fit);addEventListener('orientationchange',function(){s
 function unit(){return(app&&app.scoring&&app.scoring.unit)||'점'}
 function showStat(){
   var p=GallerySDK.getProgress(id)||{best:0,plays:0},s=app&&app.scoring;
+  if(!s){document.getElementById('stat').textContent='';return}
   document.getElementById('stat').textContent='내 최고 '+p.best+unit()+' · '+p.plays+'회'+(s?' (수료 '+s.pass+unit()+')':'');
   var c=document.getElementById('cert');
   if(s&&GallerySDK.isPassed(app)){c.style.display='inline-block';c.href='certificate.html?id='+encodeURIComponent(id)}
@@ -38,8 +49,18 @@ fetch('/api/apps/'+encodeURIComponent(id||''),{credentials:'same-origin'}).then(
   app=(a&&a.id)?a:null;
   if(!app){document.getElementById('title').textContent='앱을 찾을 수 없어요';return}
   document.title=app.title;document.getElementById('title').textContent=app.title+(app.status&&app.status!=='published'?' (공개 전 미리보기)':'');showStat();
+  document.getElementById('cmBtn').hidden=false;
   frame.src='/api/play/'+encodeURIComponent(id);
 });
+// 의견·수정 요청 창 (처음 열 때 불러와요)
+var cmBtn=document.getElementById('cmBtn'),cmPanel=document.getElementById('cmPanel'),cmLoaded=false;
+function cmToggle(open){
+  cmPanel.classList.toggle('open',open);cmBtn.setAttribute('aria-expanded',String(open));
+  if(open&&!cmLoaded){cmLoaded=true;Comments.mount(document.getElementById('cmBody'),{appId:id,loginUrl:'login.html?next='+encodeURIComponent('play.html?id='+id)})}
+}
+cmBtn.onclick=function(){cmToggle(!cmPanel.classList.contains('open'))};
+document.getElementById('cmClose').onclick=function(){cmToggle(false);cmBtn.focus()};
+addEventListener('keydown',function(e){if(e.key==='Escape'&&cmPanel.classList.contains('open'))cmToggle(false)});
 // 게임이 보내는 점수 메시지만 받는다 (이 화면의 iframe에서 온 것만)
 addEventListener('message',function(e){
   if(!app||e.source!==frame.contentWindow||!e.data||e.data.gallery!==1||e.data.type!=='score')return;

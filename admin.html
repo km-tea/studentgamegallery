@@ -27,6 +27,7 @@
   <div id="tab-apps">
     <section class="card" id="pendingCard" hidden>
       <h2>승인을 기다리는 앱</h2>
+      <p class="hint">「해 보기」 화면의 <b>💬 의견</b>으로 학생에게 수정 요청을 남길 수 있어요. 승인 전에도 올린 학생에게 보여요.</p>
       <div class="scroll"><table><thead><tr><th>앱</th><th>올린 학생</th><th>검사 결과</th><th></th></tr></thead><tbody id="pendingList"></tbody></table></div>
     </section>
 
@@ -37,6 +38,7 @@
         <label>앱 이름<input id="title" maxlength="60"></label>
         <label>연도<input id="year" type="number" min="2000" max="2100"></label>
         <label>주제<input id="subject" list="subjects" maxlength="20" placeholder="예: 그림책"></label>
+        <label>유형<select id="kind"></select></label>
         <label>만든 친구(모둠)<input id="maker" maxlength="40" placeholder="실명 대신 모둠명 권장"></label>
       </div>
       <datalist id="subjects"></datalist>
@@ -65,7 +67,23 @@
   <!-- ===== 학생 계정 ===== -->
   <div id="tab-users" hidden>
     <section class="card">
-      <h2>학생 계정 직접 만들기</h2>
+      <h2>엑셀로 학생 한꺼번에 가입시키기</h2>
+      <div class="step"><i>1</i><div><b>양식을 내려받아 채워요.</b> 이메일·별명은 꼭 쓰고, 비밀번호는 비워 두면 자동으로 만들어요. <button type="button" class="ghost sm" id="tplBtn">양식 내려받기 (.xlsx)</button></div></div>
+      <div class="step"><i>2</i><div><b>채운 파일을 올려요.</b> (.xlsx 또는 .csv)<input id="bulkFile" type="file" accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div></div>
+      <p id="bulkMsg" class="msg" role="status"></p>
+      <div id="bulkPreview" hidden>
+        <div class="scroll"><table><thead><tr><th>#</th><th>이메일</th><th>별명</th><th>비밀번호</th><th>확인</th></tr></thead><tbody id="bulkPrevBody"></tbody></table></div>
+        <p class="hint" id="bulkMore"></p>
+        <div class="step"><i>3</i><div><button id="bulkGo">가입시키기</button> <button class="ghost" id="bulkCancel">취소</button></div></div>
+      </div>
+      <div id="bulkResult" hidden>
+        <p class="notice">임시 비밀번호는 <b>이 화면에서만</b> 볼 수 있어요. 아래 「결과 내려받기」로 꼭 저장해서 학생에게 나눠 주세요.</p>
+        <div class="row" style="margin-bottom:8px"><button id="bulkDl">결과 내려받기 (.xlsx)</button><span id="bulkSummary" class="msg" style="margin:0"></span></div>
+        <div class="scroll"><table><thead><tr><th>이메일</th><th>별명</th><th>비밀번호</th><th>결과</th></tr></thead><tbody id="bulkResBody"></tbody></table></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>학생 계정 한 명씩 만들기</h2>
       <p class="hint">스스로 가입하기 어려운 친구를 위해 선생님이 대신 만들어 줄 수 있어요. 비밀번호는 학생에게 알려 주세요.</p>
       <form id="newUser">
         <div class="grid">
@@ -85,21 +103,28 @@
 
   <!-- ===== 설정 ===== -->
   <div id="tab-settings" hidden>
-    <section class="card">
-      <h2>학생 가입·업로드 설정</h2>
-      <form id="setForm">
+    <form id="setForm">
+      <section class="card">
+        <h2>① 학생 가입</h2>
         <label class="check"><input type="checkbox" id="sOpen">학생이 스스로 가입할 수 있게 하기</label>
-        <label>가입 코드 <span class="hint">학급 학생에게만 알려 주세요. 비워 두면 코드 없이 누구나 가입할 수 있어요.</span>
-          <div class="row" style="flex-wrap:nowrap"><input id="sCode" maxlength="20" style="margin-top:0" autocapitalize="characters"><button type="button" class="ghost" id="newCode" style="white-space:nowrap">새 코드 만들기</button></div></label>
-        <label class="check"><input type="checkbox" id="sAuto">학생이 올린 앱을 확인 없이 바로 공개하기 <span class="hint">&nbsp;(끄면 선생님이 승인해야 보여요)</span></label>
-        <div class="grid">
-          <label>학생 1명이 올릴 수 있는 앱 개수<input id="sMax" type="number" min="1" max="50"></label>
-        </div>
-        <label>주제 목록 <span class="hint">쉼표(,)로 구분. 학생은 이 중에서 골라요.</span><input id="sSubjects"></label>
-        <button type="submit">설정 저장</button>
-        <p id="setMsg" class="msg" role="status"></p>
-      </form>
-    </section>
+        <label for="sCode">가입 코드 <span class="hint">학급 학생에게만 알려 주세요. 비워 두면 코드 없이 누구나 가입할 수 있어요.</span></label>
+        <div class="codewrap"><input id="sCode" class="code" maxlength="20" autocapitalize="characters" autocomplete="off" aria-label="가입 코드"><button type="button" class="ghost" id="newCode">새 코드 만들기</button></div>
+      </section>
+      <section class="card">
+        <h2>② 학생이 올린 앱</h2>
+        <label class="opt"><input type="radio" name="sAuto" value="0"><span><b>선생님이 승인하면 공개</b> (추천)<small>학생이 올린 앱은 「승인 대기」로 들어가요. 선생님이 해 보고 승인하면 갤러리에 나타나요.</small></span></label>
+        <label class="opt"><input type="radio" name="sAuto" value="1"><span><b>올리면 바로 공개</b><small>확인 없이 바로 갤러리에 나타나요. 학생이 고쳐도 바로 반영돼요.</small></span></label>
+        <label style="max-width:320px;margin-top:14px">학생 1명이 올릴 수 있는 앱 개수 <span class="hint">(1~50)</span><input id="sMax" type="number" min="1" max="50"></label>
+      </section>
+      <section class="card">
+        <h2>③ 주제 목록</h2>
+        <label>학생이 고를 수 있는 주제 <span class="hint">쉼표(,)로 구분해서 적어요</span><input id="sSubjects"></label>
+      </section>
+      <div class="savebar" id="saveBar" role="status">
+        <span id="saveState">변경한 내용이 없어요</span>
+        <span class="row"><button type="button" class="ghost" id="revertBtn" disabled>되돌리기</button><button type="submit" id="setSave" disabled>변경사항 저장</button></span>
+      </div>
+    </form>
     <section class="card">
       <h2>내(교사) 비밀번호 바꾸기</h2>
       <form id="pwForm">
@@ -114,6 +139,7 @@
   </div>
 </main>
 <script src="site.js"></script>
+<script src="xlsx-lite.js"></script>
 <script>
 var editing = null, apps = [], users = [], settings = {};
 function say(id, ok, t) { $(id).className = 'msg ' + (ok ? 'good' : 'err'); $(id).textContent = t; }
@@ -121,10 +147,11 @@ function fail(e) { if (e.status === 401 || e.status === 403) return location.rep
 
 // ---------- 탭 ----------
 function showTab(name) {
+  if (typeof setDirty === 'function' && setDirty() && name !== 'settings' && !$('tab-settings').hidden && !confirm('저장하지 않은 설정 변경이 있어요. 저장하지 않고 이동할까요?')) return;
   document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === name)); });
   ['apps', 'users', 'settings'].forEach(function (n) { $('tab-' + n).hidden = n !== name; });
   try { sessionStorage.setItem('adminTab', name); } catch (e) {}
-  if (name === 'users') reloadUsers(); if (name === 'settings') loadSettings();
+  if (name === 'users') reloadUsers(); if (name === 'settings' && !setDirty()) loadSettings();
 }
 document.querySelector('.tabs').onclick = function (e) { var b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); };
 
@@ -147,9 +174,9 @@ function renderList() {
   $('count').textContent = '(' + apps.length + '개)';
   $('list').innerHTML = apps.length ? apps.map(function (a) {
     var w = warnCount(a), cls = esc(a.status);
-    return '<tr><td><b>' + esc(a.title) + '</b><br><span class="hint">' + esc(a.maker) + (a.owner_username ? ' (' + esc(a.owner_username) + ')' : '') + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</span>'
+    return '<tr><td><b>' + esc(a.title) + '</b><br><span class="hint">' + esc(a.maker) + (a.owner_username ? ' (' + esc(a.owner_username) + ')' : '') + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + (a.comment_count ? ' · <a href="play.html?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">💬 의견 ' + a.comment_count + (a.open_requests ? '(고칠 점 ' + a.open_requests + ')' : '') + '</a>' : '') + '</span>'
       + (a.status === 'rejected' && a.review_note ? '<br><span class="hint">반려 사유: ' + esc(a.review_note) + '</span>' : '') + '</td>'
-      + '<td>' + esc(a.year) + '년 · ' + esc(a.subject) + '</td>'
+      + '<td>' + esc(a.year) + '년 · ' + esc(a.subject) + '<br><span class="hint">' + esc(a.kind || '게임') + '</span></td>'
       + '<td>' + (a.pass_score ? esc(a.pass_score) + esc(a.unit) + ' · ' + esc(a.min_plays) + '회' : '없음') + '</td>'
       + '<td><span class="badge ' + cls + '">' + esc(STATUS[a.status] || a.status) + '</span></td><td><div class="row">'
       + '<a href="play.html?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">열기</a>'
@@ -170,14 +197,14 @@ function onAppAction(e) {
 }
 $('list').onclick = onAppAction; $('pendingList').onclick = onAppAction;
 
-function fill(a) { $('title').value = a.title || ''; $('year').value = a.year || new Date().getFullYear(); $('subject').value = a.subject || ''; $('maker').value = a.maker || ''; $('description').value = a.description || ''; $('pass').value = a.pass_score || ''; $('minPlays').value = a.min_plays || 1; $('unit').value = a.unit || '점'; }
+function fill(a) { $('kind').value = a.kind || '게임'; $('title').value = a.title || ''; $('year').value = a.year || new Date().getFullYear(); $('subject').value = a.subject || ''; $('maker').value = a.maker || ''; $('description').value = a.description || ''; $('pass').value = a.pass_score || ''; $('minPlays').value = a.min_plays || 1; $('unit').value = a.unit || '점'; }
 function startEdit(a) { editing = a.id; fill(a); $('file').value = ''; $('formTitle').textContent = '앱 수정: ' + a.title; $('fileHint').textContent = '(새 파일을 고르지 않으면 정보만 수정돼요)'; $('resetBtn').hidden = false; $('checks').innerHTML = ''; $('msg').textContent = ''; scrollTo({ top: 0, behavior: 'smooth' }); }
 function resetForm() { editing = null; fill({}); $('file').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = ''; $('resetBtn').hidden = true; $('checks').innerHTML = ''; $('msg').textContent = ''; }
 $('resetBtn').onclick = resetForm;
 function payload(dry) {
   var f = $('file').files[0];
   return (f ? f.text() : Promise.resolve(null)).then(function (html) {
-    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, maker: $('maker').value, description: $('description').value, pass: $('pass').value, minPlays: $('minPlays').value, unit: $('unit').value, dryRun: !!dry };
+    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, kind: $('kind').value, maker: $('maker').value, description: $('description').value, pass: $('pass').value, minPlays: $('minPlays').value, unit: $('unit').value, dryRun: !!dry };
     if (html !== null) p.html = html; return p;
   });
 }
@@ -229,18 +256,111 @@ $('newUser').onsubmit = function (e) {
 };
 
 // ---------- 설정 ----------
-function loadSettings() {
-  return api('GET', '/api/admin/settings').then(function (s) {
-    settings = s; $('sOpen').checked = s.signup_open === '1'; $('sAuto').checked = s.auto_publish === '1';
-    $('sCode').value = s.signup_code; $('sMax').value = s.max_apps; $('sSubjects').value = s.subjects;
-    $('subjects').innerHTML = s.subjects.split(',').map(function (x) { return '<option>' + esc(x.trim()) + '</option>'; }).join('');
-  }).catch(fail);
+var loaded = null, savedTimer = null;
+function formState() {
+  var auto = document.querySelector('input[name=sAuto]:checked');
+  return { signup_open: $('sOpen').checked, signup_code: $('sCode').value.trim().toUpperCase(), auto_publish: auto ? auto.value === '1' : false, max_apps: String($('sMax').value).trim(), subjects: $('sSubjects').value.trim() };
 }
-$('newCode').onclick = function () { var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', a = new Uint8Array(6), s = ''; crypto.getRandomValues(a); a.forEach(function (x) { s += abc[x % abc.length]; }); $('sCode').value = s; };
+function setDirty() { return !!loaded && JSON.stringify(formState()) !== JSON.stringify(loaded); }
+function refreshBar() {
+  var d = setDirty(), bar = $('saveBar');
+  $('setSave').disabled = $('revertBtn').disabled = !d;
+  if (d) { clearTimeout(savedTimer); bar.className = 'savebar dirty'; $('saveState').innerHTML = '<b>● 저장하지 않은 변경이 있어요</b> — 오른쪽 「변경사항 저장」을 눌러 주세요'; }
+  else if (bar.className.indexOf('saved') < 0) { bar.className = 'savebar'; $('saveState').textContent = '변경한 내용이 없어요'; }
+}
+function applySettings(s) {
+  $('sOpen').checked = s.signup_open === '1'; $('sCode').value = s.signup_code; $('sMax').value = s.max_apps; $('sSubjects').value = s.subjects;
+  document.querySelector('input[name=sAuto][value="' + (s.auto_publish === '1' ? '1' : '0') + '"]').checked = true;
+  $('subjects').innerHTML = s.subjects.split(',').map(function (x) { return '<option>' + esc(x.trim()) + '</option>'; }).join('');
+  loaded = formState(); refreshBar();
+}
+function loadSettings() { return api('GET', '/api/admin/settings').then(applySettings).catch(fail); }
+$('setForm').addEventListener('input', function () { $('saveBar').className = 'savebar'; refreshBar(); });
+$('setForm').addEventListener('change', function () { $('saveBar').className = 'savebar'; refreshBar(); });
+$('revertBtn').onclick = function () { if (loaded) { $('sOpen').checked = loaded.signup_open; $('sCode').value = loaded.signup_code; $('sMax').value = loaded.max_apps; $('sSubjects').value = loaded.subjects; document.querySelector('input[name=sAuto][value="' + (loaded.auto_publish ? '1' : '0') + '"]').checked = true; refreshBar(); } };
+$('newCode').onclick = function () { var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', a = new Uint8Array(6), s = ''; crypto.getRandomValues(a); a.forEach(function (x) { s += abc[x % abc.length]; }); $('sCode').value = s; $('saveBar').className = 'savebar'; refreshBar(); };
 $('setForm').onsubmit = function (e) {
-  e.preventDefault();
-  api('PUT', '/api/admin/settings', { signup_open: $('sOpen').checked, signup_code: $('sCode').value, auto_publish: $('sAuto').checked, max_apps: $('sMax').value, subjects: $('sSubjects').value })
-    .then(function () { say('setMsg', true, '저장했어요'); return loadSettings(); }).catch(function (er) { say('setMsg', false, er.message); });
+  e.preventDefault(); if (!setDirty()) return;
+  var f = formState(); $('setSave').disabled = true; $('saveState').textContent = '저장하는 중…';
+  api('PUT', '/api/admin/settings', f).then(function (s) {
+    applySettings(s); $('saveBar').className = 'savebar saved'; $('saveState').innerHTML = '<b>✓ 저장했어요</b>';
+    clearTimeout(savedTimer); savedTimer = setTimeout(function () { $('saveBar').className = 'savebar'; refreshBar(); }, 3500);
+  }).catch(function (er) { $('saveBar').className = 'savebar dirty'; $('saveState').innerHTML = '<b>저장하지 못했어요:</b> ' + esc(er.message); $('setSave').disabled = false; });
+};
+addEventListener('beforeunload', function (e) { if (setDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------- 엑셀로 학생 일괄 가입 ----------
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, bulkRows = [];
+function colIdx(head, re) { for (var i = 0; i < head.length; i++) if (re.test(String(head[i]).trim())) return i; return -1; }
+function parseBulk(rows) {
+  rows = rows.filter(function (r) { return r.some(function (c) { return String(c).trim(); }); });
+  if (!rows.length) throw new Error('파일에 내용이 없어요');
+  var head = rows[0], ie = colIdx(head, /이메일|메일|e-?mail/i), inn = colIdx(head, /별명|닉네임|nick/i), ip = colIdx(head, /비밀번호|암호|password|pw/i);
+  var hasHead = ie >= 0 || inn >= 0 || ip >= 0;
+  if (hasHead && ie < 0) throw new Error('「이메일」 열을 찾지 못했어요. 양식의 첫 줄(제목 줄)을 그대로 써 주세요');
+  if (!hasHead) { ie = 0; inn = 1; ip = 2; }
+  var seen = {};
+  return (hasHead ? rows.slice(1) : rows).map(function (r, i) {
+    var email = String(r[ie] || '').trim(), nick = inn >= 0 ? String(r[inn] || '').trim() : '', pw = ip >= 0 ? String(r[ip] || '').trim() : '';
+    var key = email.toLowerCase(), err = '';
+    if (!EMAIL_RE.test(key)) err = '이메일 형식이 올바르지 않아요';
+    else if (seen[key]) err = '파일 안에서 중복돼요';
+    else if (pw && pw.length < 6) err = '비밀번호는 6자 이상';
+    if (!err) seen[key] = 1;
+    return { email: email, nickname: (nick || ('학생' + (i + 1))).slice(0, 12), password: pw, error: err };
+  });
+}
+function resetBulk() { bulkRows = []; $('bulkFile').value = ''; $('bulkPreview').hidden = true; $('bulkMsg').textContent = ''; }
+$('tplBtn').onclick = function () {
+  XlsxLite.download(XlsxLite.makeXlsx([['이메일', '별명', '비밀번호 (비우면 자동 생성)'], ['student1@example.com', '별이', ''], ['student2@example.com', '달이', 'moon1234']], '학생 명단'), '학생_일괄가입_양식.xlsx');
+};
+$('bulkFile').onchange = function () {
+  var f = this.files[0]; $('bulkResult').hidden = true; $('bulkPreview').hidden = true; if (!f) return;
+  $('bulkMsg').className = 'msg'; $('bulkMsg').textContent = '파일을 읽는 중…';
+  XlsxLite.readFile(f).then(function (rows) {
+    bulkRows = parseBulk(rows); var ok = bulkRows.filter(function (r) { return !r.error; }).length;
+    if (!bulkRows.length) throw new Error('학생 줄이 없어요. 양식의 두 번째 줄부터 적어 주세요');
+    $('bulkPrevBody').innerHTML = bulkRows.slice(0, 10).map(function (r, i) {
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(r.email) + '</td><td>' + esc(r.nickname) + '</td><td>' + (r.password ? '<span class="hint">직접 정함</span>' : '<span class="hint">자동 생성</span>') + '</td><td class="' + (r.error ? 'bad' : 'okc') + '">' + (r.error ? '⚠️ ' + esc(r.error) : '✅') + '</td></tr>';
+    }).join('');
+    $('bulkMore').textContent = (bulkRows.length > 10 ? '… 나머지 ' + (bulkRows.length - 10) + '줄은 생략했어요. ' : '') + '전체 ' + bulkRows.length + '줄 중 가입 가능 ' + ok + '명' + (ok < bulkRows.length ? ', 확인이 필요한 줄 ' + (bulkRows.length - ok) + '개(가입에서 제외돼요)' : '');
+    $('bulkGo').textContent = ok + '명 가입시키기'; $('bulkGo').disabled = !ok; $('bulkPreview').hidden = false;
+    $('bulkMsg').className = 'msg good'; $('bulkMsg').textContent = '파일을 읽었어요. 아래 내용을 확인하세요.';
+  }).catch(function (e) { $('bulkMsg').className = 'msg err'; $('bulkMsg').textContent = e.message; });
+};
+$('bulkCancel').onclick = resetBulk;
+var bulkResults = [];
+$('bulkGo').onclick = function () {
+  // 결과는 엑셀 파일의 줄 순서대로 보여 줘요
+  var all = bulkRows.map(function (r, i) { return { r: r, i: i }; }), todo = all.filter(function (x) { return !x.r.error; });
+  bulkResults = new Array(bulkRows.length);
+  all.forEach(function (x) { if (x.r.error) bulkResults[x.i] = { email: x.r.email, nickname: x.r.nickname, password: '', status: 'error', error: x.r.error }; });
+  $('bulkGo').disabled = true; $('bulkCancel').disabled = true;
+  var done = 0, chain = Promise.resolve();
+  for (var i = 0; i < todo.length; i += 30) (function (chunk) {
+    chain = chain.then(function () {
+      $('bulkMsg').className = 'msg'; $('bulkMsg').textContent = '가입시키는 중… ' + done + ' / ' + todo.length;
+      return api('POST', '/api/admin/users/bulk', { users: chunk.map(function (x) { return { email: x.r.email, nickname: x.r.nickname, password: x.r.password }; }) }).then(function (d) { d.results.forEach(function (res, k) { bulkResults[chunk[k].i] = res; }); done += chunk.length; });
+    });
+  })(todo.slice(i, i + 30));
+  chain.then(function () { showBulkResult(); return reloadUsers(); }).catch(function (e) {
+    if (e.status === 401 || e.status === 403) return fail(e);
+    $('bulkMsg').className = 'msg err'; $('bulkMsg').textContent = '중간에 멈췄어요: ' + e.message + ' (여기까지 처리된 결과를 아래에 보여 줘요)'; showBulkResult(); reloadUsers();
+  });
+};
+var STAT = { created: '✅ 가입 완료', exists: '이미 가입돼 있어요', error: '⚠️ ' };
+function showBulkResult() {
+  bulkResults = bulkResults.filter(Boolean);
+  var c = bulkResults.filter(function (r) { return r.status === 'created'; }).length, x = bulkResults.filter(function (r) { return r.status === 'exists'; }).length, er = bulkResults.filter(function (r) { return r.status === 'error'; }).length;
+  $('bulkSummary').className = 'msg good'; $('bulkSummary').textContent = '가입 완료 ' + c + '명' + (x ? ' · 이미 있음 ' + x : '') + (er ? ' · 오류 ' + er : '');
+  $('bulkResBody').innerHTML = bulkResults.map(function (r) {
+    return '<tr><td>' + esc(r.email) + '</td><td>' + esc(r.nickname) + '</td><td class="mono">' + esc(r.status === 'created' ? r.password : '') + '</td><td class="' + (r.status === 'created' ? 'okc' : 'bad') + '">' + esc(STAT[r.status] + (r.status === 'error' ? r.error : '')) + '</td></tr>';
+  }).join('');
+  $('bulkResult').hidden = false; $('bulkPreview').hidden = true; $('bulkFile').value = ''; $('bulkCancel').disabled = false; $('bulkMsg').textContent = '';
+}
+$('bulkDl').onclick = function () {
+  var rows = [['이메일', '별명', '임시 비밀번호', '결과']].concat(bulkResults.map(function (r) { return [r.email, r.nickname, r.status === 'created' ? r.password : '', r.status === 'created' ? '가입 완료' : r.status === 'exists' ? '이미 가입됨' : '오류: ' + r.error]; }));
+  XlsxLite.download(XlsxLite.makeXlsx(rows, '가입 결과'), '학생_가입_결과.xlsx');
 };
 $('pwForm').onsubmit = function (e) {
   e.preventDefault(); $('pwMsg').textContent = '';
@@ -249,6 +369,7 @@ $('pwForm').onsubmit = function (e) {
 };
 $('outBtn').onclick = logout;
 
+api('GET', '/api/auth/config').then(function (c) { $('kind').innerHTML = (c.kinds || ['게임']).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join(''); }).catch(function () {});
 guard('admin').then(function (u) {
   $('who').textContent = u.nickname + ' (' + u.username + ') · 교사 전용 화면이에요. 학생에게 이 주소를 알려 주지 마세요.';
   resetForm();

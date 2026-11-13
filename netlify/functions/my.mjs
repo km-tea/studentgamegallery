@@ -21,13 +21,17 @@ export async function handle(req, context, getDb) {
   const id = context?.params?.id || (m ? decodeURIComponent(m[1]) : null);
 
   if (req.method === 'GET') {
-    const rows = await db`SELECT id, title, year, subject, description, pass_score, min_plays, unit, status, review_note, checks,
-      octet_length(html) AS size, updated_at FROM apps WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
+    const rows = await db`SELECT id, title, year, subject, kind, description, pass_score, min_plays, unit, status, review_note, checks,
+      octet_length(html) AS size, updated_at,
+      (SELECT count(*)::int FROM comments c WHERE c.app_id = apps.id) AS comment_count,
+      (SELECT count(*)::int FROM comments c WHERE c.app_id = apps.id AND c.kind = 'request' AND NOT c.resolved) AS open_requests
+      FROM apps WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
     return json(rows);
   }
 
   if (req.method === 'DELETE' && id) {
-    await db`DELETE FROM apps WHERE id = ${id} AND owner_id = ${user.id}`;
+    const del = await db`DELETE FROM apps WHERE id = ${id} AND owner_id = ${user.id} RETURNING id`;
+    if (del.length) await db`DELETE FROM comments WHERE app_id = ${id}`;
     return json({ ok: true });
   }
 

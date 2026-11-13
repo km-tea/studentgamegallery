@@ -20,13 +20,15 @@
 
   <section class="card">
     <h2 id="formTitle">새 앱 올리기</h2>
-    <label>게임 파일 (.html) <span id="fileHint" class="hint"></span><input id="file" type="file" accept=".html,.htm,text/html"></label>
+    <p class="hint" style="margin-top:-6px">게임만 올리는 곳이 아니에요! <b>퀴즈 · 학습 · 만들기 · 이야기</b>도 좋아요. 점수가 없어도 괜찮아요.</p>
+    <label>앱 파일 (.html) <span id="fileHint" class="hint"></span><input id="file" type="file" accept=".html,.htm,text/html"></label>
     <div class="grid">
       <label>앱 이름<input id="title" maxlength="60"></label>
       <label>연도<input id="year" type="number" min="2000" max="2100"></label>
       <label>주제<select id="subject"></select></label>
+      <label>유형<select id="kind"></select></label>
     </div>
-    <label>한 줄 설명<input id="description" maxlength="200" placeholder="어떤 게임인지 친구들에게 알려 주세요"></label>
+    <label>한 줄 설명<input id="description" maxlength="200" placeholder="어떤 앱인지 친구들에게 알려 주세요"></label>
     <div class="row">
       <button id="checkBtn" class="ghost">검사하기 (올리지 않음)</button>
       <button id="saveBtn">올리기</button>
@@ -37,27 +39,20 @@
     <p class="hint">별명은 '<span id="nick"></span>'(으)로 표시돼요. 수료증 기준 점수는 선생님이 정해 줘요.</p>
   </section>
 
+  <div id="fbNotice" class="notice" hidden></div>
   <section class="card">
     <h2>내가 올린 앱 <span id="count" class="hint"></span></h2>
     <div id="list" class="mine"></div>
   </section>
 
   <section class="card">
-    <h2>AI에게 게임 만들어 달라고 할 때</h2>
-    <p class="hint">아래 글을 <b>맨 앞에 붙여서</b> 요청하면 갤러리에서 점수·수료증·태블릿 조작이 잘 돼요.</p>
-    <details><summary>글 보기</summary>
-<pre class="prompt" id="prompt">아래 조건을 지켜서 게임을 만들어 줘.
-
-1. 파일 하나로 끝나는 HTML 게임(HTML, CSS, JavaScript를 한 파일에)으로 만들어 줘.
-2. 태블릿에서 손가락으로 할 수 있어야 해. 키보드가 없어도 되도록 화면에 조작 버튼을 넣거나 터치·드래그로 움직이게 해 줘. 화면 크기에 맞게 크기가 자동으로 조절되고, 가로·세로 화면 모두에서 잘리지 않게 해 줘.
-3. 게임이 한 판 끝날 때마다(성공이든 실패든) 점수를 한 번만 갤러리에 보고하는 아래 한 줄을 꼭 넣어 줘. 점수는 숫자여야 해.
-   if (window.GallerySDK) GallerySDK.reportScore('my-game', 점수);
-4. 인터넷으로 데이터를 보내거나 받는 코드(fetch, 서버, Firebase 등)는 쓰지 마. 외부 주소는 Tailwind CDN, cdnjs, jsDelivr, Google Fonts만 써도 돼.
-5. 이름이나 개인정보를 입력받는 칸은 만들지 마. (별명이 필요하면 "별명(실명 금지)"이라고 써 줘.)
-6. 점수를 올리기 쉽게 속여서 만들지 말고, 열심히 할수록 점수가 높아지게 만들어 줘.
-
-(여기에 만들고 싶은 게임 설명을 써요)</pre>
-    </details>
+    <h2>💡 무엇을 만들어 볼까요?</h2>
+    <p class="hint">점수 게임만 있는 게 아니에요. 종류를 고르면 아이디어와 <b>AI에게 보낼 요청 글</b>을 만들어 줘요.</p>
+    <div class="tabs" id="ideaTabs" role="tablist" aria-label="앱 유형"></div>
+    <div id="ideaDesc" class="hint"></div>
+    <div class="row" id="ideaList" style="margin:8px 0"></div>
+    <label>만들고 싶은 것 <span class="hint">(아이디어를 누르거나 직접 써요)</span><input id="topic" maxlength="80" placeholder="예) 분수를 그림으로 배우는 학습 자료"></label>
+    <details open><summary>AI에게 보낼 글 (맨 앞에 붙여서 요청해요)</summary><pre class="prompt" id="prompt"></pre></details>
     <button class="ghost sm" id="copyBtn">글 복사하기</button> <span id="copied" class="hint"></span>
   </section>
 
@@ -74,18 +69,19 @@
   </section>
 </main>
 <script src="site.js"></script>
+<script src="comments.js"></script>
 <script>
-var editing = null, apps = [], cfg = {}, user = null;
+var editing = null, apps = [], cfg = {}, user = null, openCm = {};
 
 function resetForm() {
-  editing = null; $('title').value = ''; $('description').value = ''; $('year').value = new Date().getFullYear();
+  editing = null; if ($('kind').options.length) $('kind').selectedIndex = 0; $('title').value = ''; $('description').value = ''; $('year').value = new Date().getFullYear();
   $('file').value = ''; $('formTitle').textContent = '새 앱 올리기'; $('fileHint').textContent = '';
   $('resetBtn').hidden = true; $('checks').innerHTML = ''; $('msg').textContent = '';
 }
 function startEdit(a) {
   editing = a.id; $('title').value = a.title; $('year').value = a.year; $('description').value = a.description || '';
   if (cfg.subjects && cfg.subjects.indexOf(a.subject) < 0) { var o = document.createElement('option'); o.textContent = a.subject; $('subject').appendChild(o); }
-  $('subject').value = a.subject; $('file').value = '';
+  $('subject').value = a.subject; $('kind').value = a.kind || '게임'; $('file').value = '';
   $('formTitle').textContent = '앱 수정: ' + a.title; $('fileHint').textContent = '(새 파일을 고르지 않으면 정보만 수정돼요)';
   $('resetBtn').hidden = false; $('checks').innerHTML = ''; $('msg').textContent = '';
   var note = cfg.autoPublish ? '' : ' 고치면 선생님이 다시 확인해요.';
@@ -95,23 +91,37 @@ function startEdit(a) {
 $('resetBtn').onclick = resetForm;
 
 function reload() { return api('GET', '/api/my/apps').then(function (rows) { apps = rows; renderList(); }); }
+var KICON = { '게임': '🎮', '퀴즈': '❓', '학습': '📚', '만들기': '🎨', '이야기': '📖', '기타': '✨' };
 function renderList() {
   $('count').textContent = '(' + apps.length + '/' + cfg.maxApps + '개)';
+  var open = apps.reduce(function (n, a) { return n + (a.open_requests || 0); }, 0);
+  $('fbNotice').hidden = !open; $('fbNotice').innerHTML = '🛠 친구들이 <b>고쳐 달라고 한 의견이 ' + open + '건</b> 있어요. 아래 「의견」 버튼을 눌러 확인해 보세요!';
   $('list').innerHTML = apps.length ? apps.map(function (a) {
     var w = ((a.checks && a.checks.checks) || []).filter(function (c) { return c.level === 'warn'; }).length;
     var note = a.status === 'rejected' ? '<div class="notice">선생님 메모: ' + esc(a.review_note || '고쳐서 다시 올려 주세요') + '</div>' : '';
     var wait = a.status === 'pending' ? '<div class="hint">선생님이 확인하면 갤러리에 나타나요.</div>' : '';
+    var fb = (a.comment_count ? '💬 의견 ' + a.comment_count : '💬 의견') + (a.open_requests ? ' · 고칠 점 ' + a.open_requests : '');
     return '<article class="card"><h3>' + esc(a.title) + '</h3><div><span class="badge ' + esc(a.status) + '">' + esc(STATUS[a.status] || a.status) + '</span></div>'
-      + '<div class="hint">' + esc(a.year) + '년 · ' + esc(a.subject) + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</div>' + note + wait
+      + '<div class="hint">' + esc(a.year) + '년 · ' + esc(a.subject) + ' · ' + (KICON[a.kind] || '') + esc(a.kind || '게임') + (w ? ' · ⚠️ 경고 ' + w + '건' : '') + '</div>' + note + wait
       + '<div class="row"><a class="btn sm" href="play.html?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">해 보기</a>'
       + '<button class="ghost sm" data-act="edit" data-id="' + esc(a.id) + '">수정</button>'
-      + '<button class="danger sm" data-act="del" data-id="' + esc(a.id) + '">삭제</button></div></article>';
+      + '<button class="' + (a.open_requests ? '' : 'ghost ') + 'sm" data-act="cm" data-id="' + esc(a.id) + '">' + esc(fb) + '</button>'
+      + '<button class="danger sm" data-act="del" data-id="' + esc(a.id) + '">삭제</button></div>'
+      + '<div class="cm-slot" data-slot="' + esc(a.id) + '" hidden></div></article>';
   }).join('') : '<p class="hint">아직 올린 앱이 없어요. 위에서 첫 앱을 올려 보세요!</p>';
+  Object.keys(openCm).forEach(function (id) { if (openCm[id]) showCm(id, true); });
+}
+// 앱별 의견 창 열기/닫기
+function showCm(id, on) {
+  var slot = document.querySelector('[data-slot="' + id.replace(/"/g, '') + '"]'); if (!slot) return;
+  openCm[id] = on; slot.hidden = !on;
+  if (on) Comments.mount(slot, { appId: id, onChange: function (d) { var a = apps.filter(function (x) { return x.id === id; })[0]; if (a) { a.comment_count = d.comments.length; a.open_requests = d.openRequests; var b = document.querySelector('button[data-act=cm][data-id="' + id + '"]'); if (b) { b.textContent = '💬 의견 ' + d.comments.length + (d.openRequests ? ' · 고칠 점 ' + d.openRequests : ''); b.className = (d.openRequests ? '' : 'ghost ') + 'sm'; } var open = apps.reduce(function (n, x) { return n + (x.open_requests || 0); }, 0); $('fbNotice').hidden = !open; $('fbNotice').innerHTML = '🛠 친구들이 <b>고쳐 달라고 한 의견이 ' + open + '건</b> 있어요. 아래 「의견」 버튼을 눌러 확인해 보세요!'; } } });
 }
 $('list').onclick = function (e) {
   var b = e.target.closest('button[data-act]'); if (!b) return;
   var a = apps.filter(function (x) { return x.id === b.dataset.id; })[0]; if (!a) return;
   if (b.dataset.act === 'edit') startEdit(a);
+  if (b.dataset.act === 'cm') showCm(a.id, !openCm[a.id]);
   if (b.dataset.act === 'del' && confirm('「' + a.title + '」을(를) 삭제할까요? 되돌릴 수 없어요.'))
     api('DELETE', '/api/my/apps/' + encodeURIComponent(a.id)).then(reload).then(function () { if (editing === a.id) resetForm(); });
 };
@@ -119,7 +129,7 @@ $('list').onclick = function (e) {
 function payload(dry) {
   var f = $('file').files[0];
   return (f ? f.text() : Promise.resolve(null)).then(function (html) {
-    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, description: $('description').value, dryRun: !!dry };
+    var p = { id: editing, title: $('title').value, year: $('year').value, subject: $('subject').value, kind: $('kind').value, description: $('description').value, dryRun: !!dry };
     if (html !== null) p.html = html; return p;
   });
 }
@@ -143,6 +153,44 @@ function run(dry) {
 $('checkBtn').onclick = function () { run(true); }; $('saveBtn').onclick = function () { run(false); };
 $('outBtn').onclick = logout;
 
+// ---------- 아이디어 제안 + AI 요청 글 ----------
+var KIND_INFO = {
+  '게임': { noun: '게임', desc: '점수에 도전하는 게임이에요. 점수가 기록되면 수료증도 받을 수 있어요.', ideas: ['쓰레기를 알맞은 통에 넣는 분리배출 게임', '구구단 달리기 게임', '우리나라 도시 위치 맞히기 게임', '오염 장애물을 피하는 지구 지키기 게임'],
+    rule: "한 판이 끝날 때마다(성공이든 실패든) 점수를 한 번만 갤러리에 보고하는 아래 한 줄을 꼭 넣어 줘. 점수는 숫자여야 해.\n   if (window.GallerySDK) GallerySDK.reportScore('my-game', 점수);\n   점수를 쉽게 올리려고 속여서 만들지 말고, 열심히 할수록 점수가 높아지게 해 줘." },
+  '퀴즈': { noun: '퀴즈', desc: '문제를 풀고 맞는지 확인하는 앱이에요. 점수 기록은 필요 없어요.', ideas: ['우리나라 역사 인물 OX 퀴즈', '과학 용어 4지선다 퀴즈', '영어 단어 뜻 맞히기 퀴즈', '우리 학교·우리 동네 상식 퀴즈'],
+    rule: "문제는 10개 이상, 한 번에 한 문제씩 보여 줘. 답을 고르면 바로 맞았는지 알려 주고 짧은 설명을 붙여 줘. 마지막에 맞힌 개수와 격려 한마디를 보여 주고 '다시 하기' 버튼을 넣어 줘. 점수를 갤러리에 보고하는 코드는 넣지 않아도 돼." },
+  '학습': { noun: '학습 자료', desc: '설명을 읽고 따라 하며 배우는 앱이에요. 친구들의 공부 도우미가 돼요.', ideas: ['분수를 그림으로 알아보기', '태양계 행성 카드로 공부하기', '맞춤법 헷갈리는 말 연습하기', '시계 보는 법 익히기'],
+    rule: "'알아보기 → 따라 해 보기 → 확인 문제' 순서로 단계마다 '다음' 버튼으로 넘어가게 해 줘. 그림이나 예시를 많이 쓰고, 틀리면 힌트를 보여 줘. 점수 보고 코드는 필요 없어." },
+  '만들기': { noun: '만들기 도구', desc: '그리고, 꾸미고, 소리를 만드는 도구예요. 정답이 없는 자유로운 앱이에요.', ideas: ['나만의 그림판', '이모지 스티커로 포스터 꾸미기', '건반으로 작곡해 보기', '동물 캐릭터 만들기'],
+    rule: "내가 직접 만들어 볼 수 있게 해 줘. 지우기·되돌리기·처음부터 버튼을 꼭 넣어 줘. 점수 보고 코드는 필요 없어." },
+  '이야기': { noun: '이야기(그림책)', desc: '장면을 넘기며 읽는 이야기예요. 선택에 따라 달라지면 더 재미있어요.', ideas: ['내가 고르는 모험 이야기', '환경을 지키는 그림책', '우리 학교 소개 카드뉴스', '역사 속 하루 체험 이야기'],
+    rule: "장면마다 그림(이모지나 도형도 괜찮아)과 글이 나오고, 다음 장면으로 넘어가는 버튼을 넣어 줘. 선택에 따라 이야기가 달라지면 더 좋아. 점수 보고 코드는 필요 없어." },
+  '기타': { noun: '웹앱', desc: '위 종류에 딱 맞지 않는 아이디어라면 여기에 올려요.', ideas: ['타이머·모래시계', '시간표 도우미', '독서 기록 카드', '칭찬 룰렛'],
+    rule: "자유롭게 만들되 사용 방법이 한눈에 보이게 해 줘. 점수 보고 코드는 필요 없어." }
+};
+var ideaKind = '게임';
+function buildPrompt() {
+  var k = KIND_INFO[ideaKind], t = $('topic').value.trim();
+  return '아래 조건을 지켜서 ' + k.noun + '을(를) 만들어 줘.\n\n'
+    + '1. 파일 하나로 끝나는 HTML(HTML, CSS, JavaScript를 한 파일에)로 만들어 줘.\n'
+    + '2. 태블릿에서 손가락으로 할 수 있어야 해. 키보드가 없어도 되도록 화면에 버튼을 넣거나 터치·드래그로 조작하게 해 줘. 화면 크기에 맞게 자동으로 조절되고 가로·세로 화면 모두에서 잘리지 않게 해 줘.\n'
+    + '3. ' + k.rule + '\n'
+    + '4. 인터넷으로 데이터를 보내거나 받는 코드(fetch, 서버, Firebase 등)는 쓰지 마. 외부 주소는 Tailwind CDN, cdnjs, jsDelivr, Google Fonts만 써도 돼.\n'
+    + '5. 이름이나 개인정보를 입력받는 칸은 만들지 마. (별명이 필요하면 "별명(실명 금지)"이라고 써 줘.)\n'
+    + '6. 글씨는 크고 읽기 쉽게, 색깔만으로 정답을 구분하지 않게 해 줘.\n\n'
+    + '[만들고 싶은 것]\n' + (t || '(여기에 만들고 싶은 ' + k.noun + ' 설명을 써요)');
+}
+function drawIdeas() {
+  var k = KIND_INFO[ideaKind];
+  $('ideaTabs').innerHTML = Object.keys(KIND_INFO).map(function (n) { return '<button type="button" class="tab" role="tab" data-kind="' + n + '" aria-selected="' + (n === ideaKind) + '">' + (KICON[n] || '') + ' ' + n + '</button>'; }).join('');
+  $('ideaDesc').textContent = k.desc;
+  $('ideaList').innerHTML = k.ideas.map(function (t) { return '<button type="button" class="ghost sm" data-idea="' + esc(t) + '">' + esc(t) + '</button>'; }).join('');
+  $('prompt').textContent = buildPrompt();
+}
+$('ideaTabs').onclick = function (e) { var b = e.target.closest('[data-kind]'); if (!b) return; ideaKind = b.dataset.kind; if (!editing) $('kind').value = ideaKind; drawIdeas(); };
+$('ideaList').onclick = function (e) { var b = e.target.closest('[data-idea]'); if (!b) return; $('topic').value = b.dataset.idea; $('prompt').textContent = buildPrompt(); };
+$('topic').oninput = function () { $('prompt').textContent = buildPrompt(); };
+$('kind').onchange = function () { if (KIND_INFO[this.value]) { ideaKind = this.value; drawIdeas(); } };
 $('copyBtn').onclick = function () {
   var t = $('prompt').textContent;
   (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { $('copied').textContent = '복사했어요!'; })
@@ -165,6 +213,8 @@ guard().then(function (u) {
 }).then(function (c) {
   cfg = c;
   $('subject').innerHTML = c.subjects.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
+  $('kind').innerHTML = (c.kinds || ['게임']).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
+  drawIdeas();
   if (user.role !== 'admin') {
     $('policy').hidden = false;
     $('policy').textContent = c.autoPublish ? '올린 앱은 바로 갤러리에 나타나요. 앱은 ' + c.maxApps + '개까지 올릴 수 있어요.'

@@ -1,5 +1,5 @@
 // 계정: 가입 / 로그인 / 로그아웃 / 내 정보 / 비밀번호 변경 / 화면용 공개 설정
-import { getSql, json, getSettings, subjectList } from './_lib/db.mjs';
+import { getSql, json, getSettings, subjectList, KINDS } from './_lib/db.mjs';
 import { hashPassword, verifyPassword, DUMMY_HASH, safeEqual, randomId } from './_lib/crypto.mjs';
 import { sessionCookie, clearCookie, currentUser, publicUser, checkOrigin, cleanEmail } from './_lib/auth.mjs';
 
@@ -31,6 +31,7 @@ export async function handle(req, context, getDb) {
         signupOpen: s.signup_open === '1',
         codeRequired: !!s.signup_code,
         subjects: subjectList(s),
+        kinds: KINDS,
         maxApps: parseInt(s.max_apps, 10) || 3,
         autoPublish: s.auto_publish === '1',
         needsSetup: !admins.length, // 관리자 계정이 아직 없음 (ADMIN_PASSWORD 미설정)

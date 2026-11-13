@@ -58,7 +58,7 @@ export function transform(src, id) {
   return { html, fixes };
 }
 
-export function inspect(src) {
+export function inspect(src, opts = {}) {
   const s = String(src);
   const checks = [];
   const add = (level, text) => checks.push({ level, text });
@@ -71,7 +71,8 @@ export function inspect(src) {
   add('info', `파일 크기 ${kb}KB`);
 
   if (/reportScore\s*\(/.test(s)) add('ok', '점수 기록(reportScore) 호출이 있어요 → 랭킹·수료증을 쓸 수 있어요');
-  else add('warn', 'reportScore 호출이 없어요 → 점수가 기록되지 않아 수료증을 받을 수 없어요 (게임 만들기 프롬프트를 맨 앞에 붙여서 다시 만들어 보세요)');
+  else if (opts.kind && opts.kind !== '게임') add('info', '점수 기록(reportScore)이 없어요 → 괜찮아요! 퀴즈·학습·만들기 앱은 점수 없이 자유롭게 플레이하는 앱으로 올라가요');
+  else add('warn', 'reportScore 호출이 없어요 → 점수가 기록되지 않아 수료증을 받을 수 없어요 (점수 없는 앱이라면 유형을 「퀴즈」「학습」 등으로 바꿔 보세요)');
 
   const keyboard = /keydown|keyup|onkeydown/.test(s);
   const pointer = /touchstart|touchend|pointerdown|mousedown|onclick|addEventListener\(\s*['"]click/.test(s);
