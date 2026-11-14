@@ -110,7 +110,7 @@ login.html · my.html · admin.html           로그인·학생·교사 화면 (
 ui.css · site.js                            위 3개 화면의 공통 스타일·도우미
 xlsx-lite.js                                엑셀(.xlsx)·CSV 읽기/쓰기 (외부 라이브러리 없음)
 feedback.html                               기존(폴더) 앱의 의견 전용 페이지
-back-to-gallery.js                          폴더 게임 화면에 「← 갤러리」 버튼을 달아 주는 스크립트 (새 폴더 게임은 </body> 앞에 한 줄 추가)
+back-to-gallery.js                          폴더 게임용 「← 갤러리」 버튼 코드 원본 (현재 5개 게임은 각 index.html 안에 같은 코드가 직접 들어 있어요. 새 폴더 게임은 이 파일을 body 끝에 연결하거나 코드를 붙여 넣어요)
 comments.js                                 댓글 창 (플레이·내 앱 화면이 함께 사용)
 apps.json + 2026/…                          폴더로 올린 기존 앱 (그대로 동작)
 netlify/functions/
