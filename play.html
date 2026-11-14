@@ -8,6 +8,8 @@
 html,body{height:100%;margin:0;background:#10172A;color:#EEF2FB;font-family:'Noto Sans KR',system-ui,sans-serif}
 #bar{height:44px;display:flex;align-items:center;gap:14px;padding:0 12px;box-sizing:border-box}
 #bar a{color:#FFD66B;text-decoration:none;white-space:nowrap}
+#bar a.back{border:1.5px solid #FFD66B;border-radius:999px;padding:3px 14px;font-weight:700}
+#bar a.back:focus-visible{outline:3px solid #FFC83D;outline-offset:2px}
 #title{font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
 #stat{font-size:.9rem;color:#9AA6C4;white-space:nowrap}
 #cert{display:none;background:#FFC83D;color:#14213D!important;border-radius:8px;padding:3px 10px;font-weight:700}
@@ -24,7 +26,7 @@ iframe{display:block;width:100%;border:0;background:#fff}
 </style>
 </head>
 <body>
-<div id="bar"><a href="./">← 갤러리</a><span id="title"></span><span id="stat"></span><a id="cert" href="#">수료증 받기</a><button id="cmBtn" type="button" aria-expanded="false" aria-controls="cmPanel" hidden>💬 의견</button></div>
+<div id="bar"><a class="back" href="./" aria-label="갤러리로 돌아가기">← 갤러리</a><span id="title"></span><span id="stat"></span><a id="cert" href="#">수료증 받기</a><button id="cmBtn" type="button" aria-expanded="false" aria-controls="cmPanel" hidden>💬 의견</button></div>
 <aside id="cmPanel" aria-label="의견과 수정 요청"><div id="cmHead"><span>💬 의견 · 수정 요청</span><button id="cmClose" type="button" aria-label="닫기">×</button></div><div id="cmBody"></div></aside>
 <div id="toast" role="status"></div>
 <!-- 게임은 sandbox(격리) 상태로 실행돼요: 이 사이트의 저장 기록·서버에 접근할 수 없어요 -->
