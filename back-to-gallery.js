@@ -1,5 +1,5 @@
 /* 폴더로 올린 게임(2026/… 같은 폴더 앱) 화면에 「← 갤러리」 버튼을 달아 줘요.
-   새 폴더 게임에도 </body> 앞에 <script src="/back-to-gallery.js"></script> 한 줄만 넣으면 돼요.
+   새 폴더 게임에도 body 끝 바로 앞에 back-to-gallery.js 스크립트 한 줄만 넣으면 돼요.
    (갤러리의 플레이 화면 안에서 열린 경우에는 이미 버튼이 있어서 달지 않아요) */
 (function () {
   if (window.self !== window.top || document.getElementById('gallery-back')) return;
